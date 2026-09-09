@@ -3,6 +3,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Intertwine.API.Models;
 using Intertwine.API.Services;
+using Microsoft.EntityFrameworkCore;
+using Intertwine.Repositories.Data;
+using Microsoft.AspNetCore.Identity;
+using Intertwine.Repositories.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,6 +17,20 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSet
 
 // Register token service
 builder.Services.AddScoped<ITokenService, TokenService>();
+
+// Configure EF Core and Identity
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrEmpty(connectionString))
+{
+    throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+}
+
+builder.Services.AddDbContext<IntertwineDbContext>(options =>
+    options.UseSqlServer(connectionString));
+
+builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    .AddEntityFrameworkStores<IntertwineDbContext>()
+    .AddDefaultTokenProviders();
 
 // Configure authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
