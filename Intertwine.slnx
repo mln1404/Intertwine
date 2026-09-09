@@ -1,0 +1,12 @@
+<Solution>
+  <Project Path="Intertwine.API/Intertwine.API.csproj">
+    <BuildDependency Project="Intertwine.Services/Intertwine.Services.csproj" />
+  </Project>
+  <Project Path="Intertwine.Domain/Intertwine.Domain.csproj" Id="2fe4eeab-8bdc-4c40-bdf6-4ee1f74a9c0a" />
+  <Project Path="Intertwine.Repositories/Intertwine.Repositories.csproj" Id="7cb4b9a8-fd99-49b8-90ab-f8c2a77827cf">
+    <BuildDependency Project="Intertwine.Domain/Intertwine.Domain.csproj" />
+  </Project>
+  <Project Path="Intertwine.Services/Intertwine.Services.csproj" Id="c2209b61-9d9a-4507-bd8d-3b2bc6e0463e">
+    <BuildDependency Project="Intertwine.Domain/Intertwine.Domain.csproj" />
+  </Project>
+</Solution>

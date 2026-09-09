@@ -1,0 +1,6 @@
+@Intertwine.API_HostAddress = http://localhost:5288
+
+GET {{Intertwine.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
