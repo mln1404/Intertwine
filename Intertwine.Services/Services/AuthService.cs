@@ -91,10 +91,12 @@ public class AuthService : IAuthService
             };
         }
 
+        var token = _tokenService.GenerateToken(user.Id, user.Email!);
         return new AuthResult
         {
             Succeeded = true,
-            UserId = user.Id
+            UserId = user.Id,
+            Token = token
         };
     }
 }

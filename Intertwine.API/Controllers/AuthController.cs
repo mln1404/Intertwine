@@ -1,9 +1,11 @@
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Intertwine.API.Controllers;
 
+[EnableRateLimiting("login")]
 [ApiController]
 [Route("api/[controller]")]
 public class AuthController : ControllerBase

@@ -1,20 +1,21 @@
-using Intertwine.API.Models;
+using Intertwine.API.Middleware;
 using Intertwine.Identity;
 using Intertwine.Repositories.Data;
+using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-// Configure JwtSettings from configuration
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 
 // Register token service
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -39,11 +40,19 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 // Repository registrations
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 
+// Configure JwtSettings from configuration
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
 // Configure authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 if (jwtSettings is null)
 {
     throw new InvalidOperationException("JWT settings are not configured. Check appsettings.json.");
+}
+if (string.IsNullOrWhiteSpace(jwtSettings?.Key))
+{
+    throw new InvalidOperationException(
+        "JwtSettings.Key is empty!");
 }
 
 var keyBytes = Encoding.UTF8.GetBytes(jwtSettings.Key);
@@ -67,6 +76,18 @@ builder.Services.AddAuthentication(options =>
         };
     });
 
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("login", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueLimit = 0;
+    });
+
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -77,6 +98,10 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+app.UseRateLimiter();
 
 app.UseHttpsRedirection();
 
