@@ -8,12 +8,8 @@
     /// </remarks>
     public class Answer
     {
-        public Answer()
-        {
-            Question = new();
-        }
-
         public int AnswerId { get; set; }
+
         /// <summary>
         /// The text of the answer option.
         /// </summary>
@@ -22,6 +18,6 @@
         /// <summary>
         /// The <see cref="Question"/> this answer belongs to.
         /// </summary>
-        public Question Question { get; set; }
+        public Question Question { get; set; } = null!;
     }
 }

@@ -5,23 +5,20 @@
     /// </summary>
     public class QuestionCategories
     {
-        public QuestionCategories()
-        {
-            Category = new();
-            Question = new();
-        }
         public int QuestionCategoryId { get; set; }
+
         public int QuestionId { get; set; }
+
         public int CategoryId { get; set; }
 
         /// <summary>
         /// The category side of the relationship.
         /// </summary>
-        public Category Category { get; set; }
+        public Category Category { get; set; } = null!;
 
         /// <summary>
         /// The question side of the relationship.
         /// </summary>
-        public Question Question { get; set; }
+        public Question Question { get; set; } = null!;
     }
 }

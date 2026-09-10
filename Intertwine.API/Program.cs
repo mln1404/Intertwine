@@ -1,12 +1,13 @@
-using System.Text;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
 using Intertwine.API.Models;
-using Intertwine.API.Services;
-using Microsoft.EntityFrameworkCore;
+using Intertwine.Identity;
 using Intertwine.Repositories.Data;
+using Intertwine.Services.Interfaces;
+using Intertwine.Services.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Intertwine.Repositories.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +32,12 @@ builder.Services.AddDbContext<IntertwineDbContext>(options =>
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<IntertwineDbContext>()
     .AddDefaultTokenProviders();
+
+// Service registrations
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+// Repository registrations
+builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 
 // Configure authentication
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();

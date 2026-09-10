@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Intertwine.Domain.Entities;
 
-namespace Intertwine.Repositories.Identity;
+namespace Intertwine.Identity;
 
 public class ApplicationUser : IdentityUser
 {

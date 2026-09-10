@@ -1,4 +1,4 @@
-namespace Intertwine.API.Services;
+namespace Intertwine.Services.Interfaces;
 
 public interface ITokenService
 {

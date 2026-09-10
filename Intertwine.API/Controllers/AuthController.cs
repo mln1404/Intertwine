@@ -1,7 +1,6 @@
+using Intertwine.Services.DTOs.Authentication;
+using Intertwine.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
-using Intertwine.API.Models;
-using Intertwine.API.Services;
 
 namespace Intertwine.API.Controllers;
 
@@ -9,53 +8,37 @@ namespace Intertwine.API.Controllers;
 [Route("api/[controller]")]
 public class AuthController : ControllerBase
 {
-    private readonly ITokenService _tokenService;
-    private readonly JwtSettings _jwtSettings;
+    private readonly IAuthService _authService;
 
-    public AuthController(ITokenService tokenService, IOptions<JwtSettings> options)
+    public AuthController(IAuthService authService)
     {
-        _tokenService = tokenService;
-        _jwtSettings = options.Value;
+        _authService = authService;
+    }
+
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(RegisterRequest request)
+    {
+        var result = await _authService.RegisterAsync(request);
+
+        if (!result.Succeeded)
+        {
+            return BadRequest(result);
+        }
+
+        return Ok(result);
     }
 
     [HttpPost("login")]
-    public IActionResult Login([FromBody] LoginRequest request)
+    public async Task<IActionResult> Login(LoginRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.Username) || string.IsNullOrWhiteSpace(request.Password))
+        var result = await _authService.LoginAsync(request);
+
+        if (!result.Succeeded)
         {
-            return BadRequest("Username and password are required.");
+            return Unauthorized(result);
         }
 
-        // TODO: Replace this in-memory check with a real user store.
-        // Simple demo user: username 'admin' and password 'Password123!'
-        if (!ValidateCredentials(request.Username, request.Password, out var userId))
-        {
-            return Unauthorized();
-        }
-
-        var token = _tokenService.GenerateToken(userId, request.Username);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpiryMinutes);
-
-        var response = new LoginResponse
-        {
-            Token = token,
-            UserName = request.Username,
-            ExpiresAtUtc = expiresAt
-        };
-
-        return Ok(response);
-    }
-
-    private bool ValidateCredentials(string username, string password, out string userId)
-    {
-        userId = string.Empty;
-        // Demo-only: a single hard-coded user
-        if (username == "admin" && password == "Password123!")
-        {
-            userId = "1";
-            return true;
-        }
-
-        return false;
+        return Ok(result);
     }
 }
+

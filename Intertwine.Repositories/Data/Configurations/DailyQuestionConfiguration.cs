@@ -10,7 +10,7 @@ namespace Intertwine.Repositories.Data.Configurations
         {
             builder.HasKey(d => d.DailyQuestionId);
 
-            builder.Property(d => d.DateNow)
+            builder.Property(d => d.Date)
                 .IsRequired();
 
             builder.HasOne(d => d.Question)

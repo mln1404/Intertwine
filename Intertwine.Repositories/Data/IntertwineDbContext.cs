@@ -1,7 +1,7 @@
 ﻿using Intertwine.Domain.Entities;
+using Intertwine.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
-using Intertwine.Repositories.Identity;
 
 namespace Intertwine.Repositories.Data
 {

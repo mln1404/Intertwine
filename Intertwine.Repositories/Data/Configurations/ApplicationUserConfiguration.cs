@@ -1,5 +1,5 @@
 ﻿using Intertwine.Domain.Entities;
-using Intertwine.Repositories.Identity;
+using Intertwine.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -3,9 +3,10 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Intertwine.API.Models;
+using Intertwine.Services.Interfaces;
+using Intertwine.Services.DTOs.Authentication;
 
-namespace Intertwine.API.Services;
+namespace Intertwine.Services.Services;
 
 public class TokenService : ITokenService
 {

@@ -3,7 +3,7 @@
     /// <summary>
     /// Represents a user's profile within the system.
     /// </summary>
-    public class UserProfile
+    public class UserProfile : BaseEntity
     {
         public UserProfile()
         {

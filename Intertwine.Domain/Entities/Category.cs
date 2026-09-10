@@ -5,11 +5,6 @@
     /// </summary>
     public class Category
     {
-        public Category()
-        {
-            QuestionCategories = new List<QuestionCategories>();
-        }
-
         public int CategoryId { get; set; }
         /// <summary>
         /// Category display name.
@@ -19,6 +14,6 @@
         /// <summary>
         /// The join collection linking this category to <see cref="Question"/> entities.
         /// </summary>
-        public ICollection<QuestionCategories> QuestionCategories { get; set; }
+        public ICollection<QuestionCategories> QuestionCategories { get; set; } = [];
     }
 }
