@@ -37,9 +37,9 @@
         public ICollection<UserAnswers> UserAnswers { get; set; }
         
         /// <summary>
-        /// FK to ASP.NET Identity's ApplicationUser
+        /// FK to ASP.NET Identity's UserId
         /// </summary>
-        public string ApplicationUserId { get; set; } = string.Empty;
+        public string IdentityUserId { get; set; } = string.Empty;
 
     }
 }

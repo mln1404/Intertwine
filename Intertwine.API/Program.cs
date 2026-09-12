@@ -1,8 +1,10 @@
 using Intertwine.API.Middleware;
 using Intertwine.Identity;
 using Intertwine.Repositories.Data;
+using Intertwine.Repositories.Repositories;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
+using Intertwine.Services.Interfaces.Repositories;
 using Intertwine.Services.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -10,7 +12,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 
 // Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
 // Repository registrations
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();

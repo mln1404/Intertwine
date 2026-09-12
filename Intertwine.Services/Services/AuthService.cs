@@ -1,6 +1,7 @@
 ﻿using Intertwine.Identity;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
+using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.AspNetCore.Identity;
 
 namespace Intertwine.Services.Services;

@@ -1,6 +1,9 @@
 ﻿using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
-using Intertwine.Services.Interfaces;
+using Intertwine.Services.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
+
+namespace Intertwine.Repositories.Repositories;
 
 public class UserProfileRepository : IUserProfileRepository
 {
@@ -11,9 +14,48 @@ public class UserProfileRepository : IUserProfileRepository
         _context = context;
     }
 
-    public async Task CreateAsync(UserProfile profile)
+    public async Task<UserProfile?> GetByIdAsync(int userProfileId)
     {
-        await _context.UserProfiles.AddAsync(profile);
+        return await _context.UserProfiles
+            .AsNoTracking()
+            .Include(x => x.UserAnswers)
+            .FirstOrDefaultAsync(x => x.UserProfileId == userProfileId);
+    }
+
+    public async Task<UserProfile?> GetByIdentityUserIdAsync(
+        string identityUserId)
+    {
+        return await _context.UserProfiles
+            .Include(x => x.UserAnswers)
+            .FirstOrDefaultAsync(
+                x => x.IdentityUserId == identityUserId);
+    }
+
+    public async Task<IEnumerable<UserProfile>> GetAllAsync()
+    {
+        return await _context.UserProfiles
+            .AsNoTracking()
+            .Include(x => x.UserAnswers)
+            .ToListAsync();
+    }
+
+    public async Task<UserProfile> AddAsync(UserProfile userProfile)
+    {
+        await _context.UserProfiles.AddAsync(userProfile);
+        await _context.SaveChangesAsync();
+
+        return userProfile;
+    }
+
+    public async Task UpdateAsync(UserProfile userProfile)
+    {
+        _context.UserProfiles.Update(userProfile);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DeleteAsync(UserProfile userProfile)
+    {
+        _context.UserProfiles.Remove(userProfile);
         await _context.SaveChangesAsync();
     }
 }

@@ -13,7 +13,7 @@ public class ApplicationUserConfiguration
         builder
             .HasOne(x => x.UserProfile)
             .WithOne()
-            .HasForeignKey<UserProfile>(x => x.ApplicationUserId)
+            .HasForeignKey<UserProfile>(x => x.IdentityUserId)
             .IsRequired();
     }
 }
