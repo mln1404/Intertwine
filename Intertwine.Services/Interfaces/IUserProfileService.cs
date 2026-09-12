@@ -1,19 +1,16 @@
 ﻿using Intertwine.Services.DTOs.UserProfiles;
 
-namespace Intertwine.Services.Interfaces
+namespace Intertwine.Services.Interfaces;
+
+public interface IUserProfileService
 {
-    public interface IUserProfileService
-    {
+    Task<UserProfileDto?> GetCurrentUserProfileAsync(
+        string identityUserId);
 
-        public Task<UserProfileDto?> GetByIdAsync(int userProfileId);
-        public Task<UserProfileDto?> GetCurrentUserProfileAsync(string identityUserId);
+    Task<UserProfileDto?> UpdateCurrentUserAsync(
+        string identityUserId,
+        UpdateUserProfileRequest request);
 
-        public Task<IEnumerable<UserProfileDto>> GetAllAsync();
-
-        public Task<UserProfileDto?> CreateAsync(CreateUserProfileRequest request);
-
-        public Task<UserProfileDto?> UpdateAsync(int userProfileId, UpdateUserProfileRequest request);
-
-        public Task<bool> DeleteAsync(int userProfileId);
-    }
+    Task<bool> DeleteCurrentUserAsync(
+        string identityUserId);
 }

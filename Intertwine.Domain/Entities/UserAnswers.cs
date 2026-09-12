@@ -1,4 +1,6 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// Represents an answer provided by a <see cref="UserProfile"/> to an <see cref="Answer"/>.

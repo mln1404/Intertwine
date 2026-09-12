@@ -15,81 +15,27 @@ public class UserProfileService : IUserProfileService
         _userProfileRepository = userProfileRepository;
     }
 
-    public async Task<UserProfileDto?> GetByIdAsync(
-        int userProfileId)
-    {
-        var userProfile =
-            await _userProfileRepository.GetByIdAsync(userProfileId);
-
-        if (userProfile is null)
-        {
-            return null;
-        }
-
-        return MapToDto(userProfile);
-    }
-
     public async Task<UserProfileDto?> GetCurrentUserProfileAsync(
         string identityUserId)
     {
-        var userProfile =
-            await _userProfileRepository
-                .GetByIdentityUserIdAsync(identityUserId);
+        var userProfile = await _userProfileRepository
+            .GetByIdentityUserIdAsync(identityUserId);
 
         if (userProfile is null)
-        {
             return null;
-        }
 
         return MapToDto(userProfile);
     }
 
-    public async Task<IEnumerable<UserProfileDto>> GetAllAsync()
-    {
-        var userProfiles =
-            await _userProfileRepository.GetAllAsync();
-
-        return userProfiles.Select(MapToDto);
-    }
-
-    public async Task<UserProfileDto?> CreateAsync(
-        CreateUserProfileRequest request)
-    {
-        var existingProfile =
-            await _userProfileRepository
-                .GetByIdentityUserIdAsync(request.IdentityUserId);
-
-        if (existingProfile is not null)
-        {
-            return null;
-        }
-
-        var userProfile = new UserProfile
-        {
-            AvatarName = request.AvatarName,
-            FirstName = request.FirstName,
-            LastName = request.LastName,
-            MiddleName = request.MiddleName,
-            IdentityUserId = request.IdentityUserId
-        };
-
-        var createdProfile =
-            await _userProfileRepository.AddAsync(userProfile);
-
-        return MapToDto(createdProfile);
-    }
-
-    public async Task<UserProfileDto?> UpdateAsync(
-        int userProfileId,
+    public async Task<UserProfileDto?> UpdateCurrentUserAsync(
+        string identityUserId,
         UpdateUserProfileRequest request)
     {
-        var userProfile =
-            await _userProfileRepository.GetByIdAsync(userProfileId);
+        var userProfile = await _userProfileRepository
+            .GetByIdentityUserIdAsync(identityUserId);
 
         if (userProfile is null)
-        {
             return null;
-        }
 
         userProfile.AvatarName = request.AvatarName;
         userProfile.FirstName = request.FirstName;
@@ -101,15 +47,14 @@ public class UserProfileService : IUserProfileService
         return MapToDto(userProfile);
     }
 
-    public async Task<bool> DeleteAsync(int userProfileId)
+    public async Task<bool> DeleteCurrentUserAsync(
+        string identityUserId)
     {
-        var userProfile =
-            await _userProfileRepository.GetByIdAsync(userProfileId);
+        var userProfile = await _userProfileRepository
+            .GetByIdentityUserIdAsync(identityUserId);
 
         if (userProfile is null)
-        {
             return false;
-        }
 
         await _userProfileRepository.DeleteAsync(userProfile);
 

@@ -1,9 +1,11 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// A question with its title and the full question text. Links to categories and daily selections.
     /// </summary>
-    public class Question : BaseEntity
+    public class Question : ActivatableEntity
     {
         public int QuestionId { get; set; }
         /// <summary>

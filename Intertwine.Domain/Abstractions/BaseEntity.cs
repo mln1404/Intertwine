@@ -1,6 +1,6 @@
 ﻿using Intertwine.Domain.Interfaces;
 
-namespace Intertwine.Domain.Entities;
+namespace Intertwine.Domain.Abstractions;
 
 /// <summary>
 /// Base properties common to all entities in the domain.

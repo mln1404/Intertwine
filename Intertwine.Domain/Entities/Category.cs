@@ -1,9 +1,11 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// A category used to group <see cref="Question"/> entities.
     /// </summary>
-    public class Category
+    public class Category : ActivatableEntity
     {
         public int CategoryId { get; set; }
         /// <summary>

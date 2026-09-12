@@ -1,4 +1,6 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// Multiple choice answer for a <see cref="Question"/>.
@@ -6,7 +8,7 @@
     /// <remarks>
     /// Navigation property <see cref="Question"/> links the answer to its parent question.
     /// </remarks>
-    public class Answer
+    public class Answer : ActivatableEntity
     {
         public int AnswerId { get; set; }
 

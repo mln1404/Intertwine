@@ -1,9 +1,11 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// Represents a user's profile within the system.
     /// </summary>
-    public class UserProfile : BaseEntity
+    public class UserProfile : ActivatableEntity
     {
         public UserProfile()
         {

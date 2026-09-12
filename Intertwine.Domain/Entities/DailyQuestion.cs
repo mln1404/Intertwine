@@ -1,9 +1,11 @@
-﻿namespace Intertwine.Domain.Entities
+﻿using Intertwine.Domain.Abstractions;
+
+namespace Intertwine.Domain.Entities
 {
     /// <summary>
     /// Represents the question selected for a particular day.
     /// </summary>
-    public class DailyQuestion
+    public class DailyQuestion : BaseEntity
     {
         public int DailyQuestionId { get; set; }
 
