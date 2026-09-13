@@ -5,6 +5,7 @@ using Intertwine.Repositories.Repositories;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
+using Intertwine.Services.Interfaces.Services;
 using Intertwine.Services.Services;
 using Intertwine.Services.Services.Questions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -39,12 +40,15 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 // Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
 // Repository registrations
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
+builder.Services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Configure JwtSettings from configuration
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));

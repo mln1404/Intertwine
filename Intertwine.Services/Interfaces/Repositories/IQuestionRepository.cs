@@ -24,9 +24,4 @@ public interface IQuestionRepository
         int answerId,
         int questionId,
         CancellationToken cancellationToken = default);
-
-    Task<int> GetTodayNonDailyAnswerCountAsync(
-        int userProfileId,
-        DateOnly date,
-        CancellationToken cancellationToken = default);
 }

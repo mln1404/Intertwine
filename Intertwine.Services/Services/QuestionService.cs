@@ -2,7 +2,6 @@
 using Intertwine.Services.DTOs.Answers;
 using Intertwine.Services.DTOs.Categories;
 using Intertwine.Services.DTOs.Questions;
-using Intertwine.Services.DTOs.UserAnswers;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
 
@@ -11,17 +10,10 @@ namespace Intertwine.Services.Services.Questions;
 public class QuestionService : IQuestionService
 {
     private readonly IQuestionRepository _questionRepository;
-    private readonly IUserAnswerRepository _userAnswerRepository;
-    private readonly IUserProfileRepository _userProfileRepository;
 
-    public QuestionService(
-        IQuestionRepository questionRepository,
-        IUserAnswerRepository userAnswerRepository,
-        IUserProfileRepository userProfileRepository)
+    public QuestionService(IQuestionRepository questionRepository)
     {
         _questionRepository = questionRepository;
-        _userAnswerRepository = userAnswerRepository;
-        _userProfileRepository = userProfileRepository;
     }
 
     public async Task<IEnumerable<QuestionListDto>> GetQuestionsAsync(
@@ -74,67 +66,6 @@ public class QuestionService : IQuestionService
                 })
                 .ToList()
         };
-    }
-
-    public async Task<bool> SubmitAnswerAsync(
-        string identityUserId,
-        int questionId,
-        SubmitAnswerRequest request,
-        CancellationToken cancellationToken = default)
-    {
-        var userProfile =
-            await _userProfileRepository
-                .GetByIdentityUserIdAsync(identityUserId);
-
-        if (userProfile == null)
-            throw new InvalidOperationException(
-                "User profile not found.");
-
-        var answerBelongsToQuestion =
-            await _questionRepository.AnswerBelongsToQuestionAsync(
-                request.AnswerId,
-                questionId,
-                cancellationToken);
-
-        if (!answerBelongsToQuestion)
-            throw new ArgumentException(
-                "The selected answer does not belong to this question.");
-
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
-
-        var isDaily =
-            await _questionRepository.IsDailyQuestionAsync(
-                questionId,
-                today,
-                cancellationToken);
-
-        if (!isDaily)
-        {
-            var answerCount =
-                await _questionRepository
-                    .GetTodayNonDailyAnswerCountAsync(
-                        userProfile.UserProfileId,
-                        today,
-                        cancellationToken);
-
-            if (answerCount >= 2)
-                throw new InvalidOperationException(
-                    "You can only answer two additional questions per day.");
-        }
-
-        var userAnswer = new UserAnswers
-        {
-            UserProfileId = userProfile.UserProfileId,
-            AnswerId = request.AnswerId,
-            DateCreated = DateTime.UtcNow,
-            CreatedBy = identityUserId
-        };
-
-        await _userAnswerRepository.AddAsync(
-            userAnswer,
-            cancellationToken);
-
-        return true;
     }
 
     private static QuestionListDto MapToListDto(

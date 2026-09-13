@@ -5,39 +5,38 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
-public class UserAnswerRepository
-    : IUserAnswerRepository
+public class UserDailyActivityRepository
+    : IUserDailyActivityRepository
 {
     private readonly IntertwineDbContext _context;
 
-    public UserAnswerRepository(
+    public UserDailyActivityRepository(
         IntertwineDbContext context)
     {
         _context = context;
     }
 
-    public async Task<UserAnswers?> GetByUserAndQuestionAsync(
+    public async Task<UserDailyActivity?> GetByUserAndDateAsync(
         int userProfileId,
-        int questionId,
+        DateOnly date,
         CancellationToken cancellationToken = default)
     {
-        return await _context.UserAnswers
-            .Include(x => x.Answer)
+        return await _context.UserDailyActivities
             .FirstOrDefaultAsync(
                 x =>
                     x.UserProfileId == userProfileId &&
-                    x.Answer.QuestionId == questionId,
+                    x.Date == date,
                 cancellationToken);
     }
 
-    public async Task<UserAnswers> AddAsync(
-        UserAnswers userAnswer,
+    public async Task<UserDailyActivity> AddAsync(
+        UserDailyActivity activity,
         CancellationToken cancellationToken = default)
     {
-        await _context.UserAnswers.AddAsync(
-            userAnswer,
+        await _context.UserDailyActivities.AddAsync(
+            activity,
             cancellationToken);
 
-        return userAnswer;
+        return activity;
     }
 }

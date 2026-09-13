@@ -83,25 +83,4 @@ public class QuestionRepository : IQuestionRepository
                     a.QuestionId == questionId,
                 cancellationToken);
     }
-
-    public async Task<int> GetTodayNonDailyAnswerCountAsync(
-        int userProfileId,
-        DateOnly date,
-        CancellationToken cancellationToken = default)
-    {
-        var start = date.ToDateTime(TimeOnly.MinValue);
-        var end = start.AddDays(1);
-
-        return await _context.UserAnswers
-            .CountAsync(
-                ua =>
-                    ua.UserProfileId == userProfileId &&
-                    ua.DateCreated >= start &&
-                    ua.DateCreated < end &&
-                    !_context.DailyQuestions.Any(
-                        dq =>
-                            dq.QuestionId == ua.Answer.QuestionId &&
-                            dq.Date == date),
-                cancellationToken);
-    }
 }

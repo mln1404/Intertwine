@@ -2,14 +2,14 @@
 
 namespace Intertwine.Services.Interfaces.Repositories;
 
-public interface IUserAnswerRepository
+public interface IUserDailyActivityRepository
 {
-    Task<UserAnswers?> GetByUserAndQuestionAsync(
+    Task<UserDailyActivity?> GetByUserAndDateAsync(
         int userProfileId,
-        int questionId,
+        DateOnly date,
         CancellationToken cancellationToken = default);
 
-    Task<UserAnswers> AddAsync(
-        UserAnswers userAnswer,
+    Task<UserDailyActivity> AddAsync(
+        UserDailyActivity activity,
         CancellationToken cancellationToken = default);
 }

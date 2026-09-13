@@ -1,6 +1,7 @@
 ﻿using Intertwine.Services.DTOs.Questions;
 using Intertwine.Services.DTOs.UserAnswers;
 using Intertwine.Services.Interfaces;
+using Intertwine.Services.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -13,11 +14,14 @@ namespace Intertwine.API.Controllers;
 public class QuestionsController : ControllerBase
 {
     private readonly IQuestionService _questionService;
+    private readonly IUserAnswerService _userAnswerService;
 
     public QuestionsController(
-        IQuestionService questionService)
+        IQuestionService questionService,
+        IUserAnswerService userAnswerService)
     {
         _questionService = questionService;
+        _userAnswerService = userAnswerService;
     }
 
     [HttpGet]
@@ -53,6 +57,7 @@ public class QuestionsController : ControllerBase
     public async Task<IActionResult> AnswerQuestion(
         int questionId,
         [FromBody] SubmitAnswerRequest request,
+        [FromQuery] DateOnly localDate,
         CancellationToken cancellationToken)
     {
         var identityUserId =
@@ -63,10 +68,11 @@ public class QuestionsController : ControllerBase
 
         try
         {
-            await _questionService.SubmitAnswerAsync(
+            await _userAnswerService.SubmitAnswerAsync(
                 identityUserId,
                 questionId,
                 request,
+                localDate,
                 cancellationToken);
 
             return Ok(new

@@ -10,6 +10,13 @@ namespace Intertwine.Repositories.Data.Configurations
         {
             builder.HasKey(ua => ua.UserAnswerId);
 
+            builder
+                .HasIndex(x => new
+                {
+                    x.UserProfileId,
+                    x.AnswerId
+                });
+
             builder.HasOne(ua => ua.Answer)
                 .WithMany()
                 .HasForeignKey(ua => ua.AnswerId)

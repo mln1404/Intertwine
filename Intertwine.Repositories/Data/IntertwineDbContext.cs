@@ -48,6 +48,11 @@ namespace Intertwine.Repositories.Data
         /// </summary>
         public DbSet<UserAnswers> UserAnswers => Set<UserAnswers>();
 
+        /// <summary>
+        /// The users' daily activity records, tracking their interactions with the application.
+        /// </summary>
+        public DbSet<UserDailyActivity> UserDailyActivities => Set<UserDailyActivity>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

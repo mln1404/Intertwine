@@ -10,6 +10,8 @@ namespace Intertwine.Repositories.Data.Configurations
         {
             builder.HasKey(a => a.AnswerId);
 
+            builder.HasIndex(x => x.QuestionId);
+
             builder.Property(a => a.AnswerText)
                 .IsRequired()
                 .HasMaxLength(1000);
