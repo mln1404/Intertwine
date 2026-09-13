@@ -17,6 +17,8 @@ namespace Intertwine.Domain.Entities
         /// </summary>
         public string AnswerText { get; set; } = string.Empty;
 
+        public int QuestionId { get; set; }
+
         /// <summary>
         /// The <see cref="Question"/> this answer belongs to.
         /// </summary>

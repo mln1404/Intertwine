@@ -28,6 +28,11 @@ namespace Intertwine.Repositories.Data.Configurations
                 .HasForeignKey(dq => dq.QuestionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.HasMany(q => q.Answers)
+                .WithOne(a => a.Question)
+                .HasForeignKey(a => a.QuestionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Property(x => x.DateCreated)
                 .HasDefaultValueSql("GETUTCDATE()");
 

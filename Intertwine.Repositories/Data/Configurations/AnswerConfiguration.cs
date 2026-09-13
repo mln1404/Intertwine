@@ -14,10 +14,9 @@ namespace Intertwine.Repositories.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(1000);
 
-            // Answer -> Question (QuestionId is a shadow FK, Question does not expose QuestionId)
-            builder.HasOne(a => a.Question)
-                .WithMany()
-                .HasForeignKey("QuestionId")
+            builder.HasOne(d => d.Question)
+                .WithMany(q => q.Answers)
+                .HasForeignKey(d => d.QuestionId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Property(x => x.DateCreated)

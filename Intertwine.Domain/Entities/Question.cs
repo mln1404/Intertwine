@@ -27,5 +27,10 @@ namespace Intertwine.Domain.Entities
         /// Daily question entries referencing this question.
         /// </summary>
         public ICollection<DailyQuestion> DailyQuestions { get; set; } = [];
+
+        /// <summary>
+        /// Multiple choice answers associated with this question.
+        /// </summary>
+        public ICollection<Answer> Answers { get; set; } = [];
     }
 }
