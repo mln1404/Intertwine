@@ -18,6 +18,15 @@ namespace Intertwine.Repositories.Data.Configurations
                 .WithOne(qc => qc.Category)
                 .HasForeignKey(qc => qc.CategoryId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Property(x => x.DateCreated)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            builder.Property(x => x.DateUpdated)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            builder.Property(x => x.IsActive)
+                .HasDefaultValue(true);
         }
     }
 }

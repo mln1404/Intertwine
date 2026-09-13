@@ -1,5 +1,4 @@
-﻿using Intertwine.Domain.Entities;
-using Intertwine.Domain.Interfaces;
+﻿using Intertwine.Domain.Interfaces;
 
 namespace Intertwine.Domain.Abstractions
 {

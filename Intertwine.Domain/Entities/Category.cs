@@ -14,6 +14,9 @@ namespace Intertwine.Domain.Entities
         /// </summary>
         public string CategoryName { get; set; } = string.Empty;
 
+        /// <summary>
+        /// Category color in hexadecimal format (e.g., #FF5733).
+        /// </summary>
         public string Color { get; set; } = string.Empty;
 
         /// <summary>
