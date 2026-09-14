@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations
 {
+    /// <summary>
+    /// Configures the database mapping for <see cref="Category"/>.
+    /// </summary>
     public class CategoryConfiguration : IEntityTypeConfiguration<Category>
     {
         public void Configure(EntityTypeBuilder<Category> builder)
@@ -20,10 +23,10 @@ namespace Intertwine.Repositories.Data.Configurations
                 .OnDelete(DeleteBehavior.Cascade);
 
             builder.Property(x => x.DateCreated)
-                .HasDefaultValueSql("GETUTCDATE()");
+                .HasDefaultValueSql(SqlServerDefaults.UtcDateTime);
 
             builder.Property(x => x.DateUpdated)
-                .HasDefaultValueSql("GETUTCDATE()");
+                .HasDefaultValueSql(SqlServerDefaults.UtcDateTime);
 
             builder.Property(x => x.IsActive)
                 .HasDefaultValue(true);

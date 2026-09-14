@@ -8,6 +8,9 @@ using Intertwine.Services.DTOs.Authentication;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Creates signed JSON Web Tokens for authenticated users.
+/// </summary>
 public class TokenService : ITokenService
 {
     private readonly JwtSettings _settings;

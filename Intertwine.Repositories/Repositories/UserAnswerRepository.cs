@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// Provides tracked access to a user's current answer records.
+/// </summary>
 public class UserAnswerRepository
     : IUserAnswerRepository
 {

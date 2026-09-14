@@ -3,6 +3,9 @@ using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// EF Core-backed unit of work for the current database context.
+/// </summary>
 public class UnitOfWork : IUnitOfWork
 {
     private readonly IntertwineDbContext _context;
@@ -12,6 +15,7 @@ public class UnitOfWork : IUnitOfWork
         _context = context;
     }
 
+    /// <inheritdoc />
     public Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {

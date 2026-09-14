@@ -1,3 +1,4 @@
+using Intertwine.API.Constants;
 using Intertwine.API.Middleware;
 using Intertwine.Identity;
 using Intertwine.Repositories.Data;
@@ -24,10 +25,12 @@ builder.Services.AddControllers();
 builder.Services.AddScoped<ITokenService, TokenService>();
 
 // Configure EF Core and Identity
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+var connectionString = builder.Configuration.GetConnectionString(
+    ApplicationSettings.DefaultConnection);
 if (string.IsNullOrEmpty(connectionString))
 {
-    throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+    throw new InvalidOperationException(
+        $"Connection string '{ApplicationSettings.DefaultConnection}' is not configured.");
 }
 
 builder.Services.AddDbContext<IntertwineDbContext>(options =>
@@ -51,13 +54,17 @@ builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // Configure JwtSettings from configuration
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+builder.Services.Configure<JwtSettings>(
+    builder.Configuration.GetSection(ApplicationSettings.JwtSettings));
 
 // Configure authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
+var jwtSettings = builder.Configuration
+    .GetSection(ApplicationSettings.JwtSettings)
+    .Get<JwtSettings>();
 if (jwtSettings is null)
 {
-    throw new InvalidOperationException("JWT settings are not configured. Check appsettings.json.");
+    throw new InvalidOperationException(
+        "JWT settings are not configured. Check appsettings.json.");
 }
 if (string.IsNullOrWhiteSpace(jwtSettings?.Key))
 {
@@ -88,7 +95,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddRateLimiter(options =>
 {
-    options.AddFixedWindowLimiter("login", limiterOptions =>
+    options.AddFixedWindowLimiter(ApplicationSettings.LoginRateLimitPolicy, limiterOptions =>
     {
         limiterOptions.PermitLimit = 5;
         limiterOptions.Window = TimeSpan.FromMinutes(1);

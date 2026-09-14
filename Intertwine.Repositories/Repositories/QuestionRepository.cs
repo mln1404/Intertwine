@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// Provides database queries for questions, answers, and Daily Question assignments.
+/// </summary>
 public class QuestionRepository : IQuestionRepository
 {
     private readonly IntertwineDbContext _context;

@@ -5,6 +5,9 @@ using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Data
 {
+    /// <summary>
+    /// EF Core database context for Intertwine's identity and application data.
+    /// </summary>
     public class IntertwineDbContext : IdentityDbContext<ApplicationUser>
     {
         public IntertwineDbContext(

@@ -9,6 +9,9 @@ namespace Intertwine.API.Controllers;
 [ApiController]
 [Route("api/[controller]")]
 [Authorize]
+/// <summary>
+/// Exposes endpoints for the authenticated user's profile.
+/// </summary>
 public class UserProfileController : ControllerBase
 {
     private readonly IUserProfileService _userProfileService;
@@ -20,6 +23,9 @@ public class UserProfileController : ControllerBase
     }
 
     [HttpGet("me")]
+    /// <summary>
+    /// Retrieves the authenticated user's profile.
+    /// </summary>
     public async Task<IActionResult> GetMe()
     {
         var identityUserId =
@@ -38,6 +44,9 @@ public class UserProfileController : ControllerBase
     }
 
     [HttpPut("me")]
+    /// <summary>
+    /// Updates the authenticated user's profile.
+    /// </summary>
     public async Task<IActionResult> UpdateMe(
         UpdateUserProfileRequest request)
     {
@@ -59,6 +68,9 @@ public class UserProfileController : ControllerBase
     }
 
     [HttpDelete("me")]
+    /// <summary>
+    /// Deletes the authenticated user's profile.
+    /// </summary>
     public async Task<IActionResult> DeleteMe()
     {
         var identityUserId =

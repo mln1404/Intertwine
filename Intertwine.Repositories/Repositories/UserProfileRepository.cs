@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// Provides database operations for user profiles.
+/// </summary>
 public class UserProfileRepository : IUserProfileRepository
 {
     private readonly IntertwineDbContext _context;

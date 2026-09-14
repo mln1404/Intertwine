@@ -11,6 +11,9 @@ namespace Intertwine.API.Controllers;
 [ApiController]
 [Route("api/questions")]
 [Authorize]
+/// <summary>
+/// Exposes question retrieval and answer-submission endpoints.
+/// </summary>
 public class QuestionsController : ControllerBase
 {
     private readonly IQuestionService _questionService;
@@ -25,6 +28,9 @@ public class QuestionsController : ControllerBase
     }
 
     [HttpGet]
+    /// <summary>
+    /// Retrieves active questions, optionally filtered by category.
+    /// </summary>
     public async Task<IActionResult> GetQuestions(
         [FromQuery] int? categoryId,
         CancellationToken cancellationToken)
@@ -38,6 +44,9 @@ public class QuestionsController : ControllerBase
     }
 
     [HttpGet("{questionId:int}")]
+    /// <summary>
+    /// Retrieves one active question and its available answers.
+    /// </summary>
     public async Task<IActionResult> GetQuestion(
         int questionId,
         CancellationToken cancellationToken)
@@ -54,6 +63,9 @@ public class QuestionsController : ControllerBase
     }
 
     [HttpPost("{questionId:int}/answer")]
+    /// <summary>
+    /// Submits the caller's answer using the local date supplied by the client.
+    /// </summary>
     public async Task<IActionResult> AnswerQuestion(
         int questionId,
         [FromBody] SubmitAnswerRequest request,

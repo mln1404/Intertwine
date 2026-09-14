@@ -1,4 +1,5 @@
 ﻿using Intertwine.Identity;
+using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
@@ -6,6 +7,9 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Handles identity registration and credential validation.
+/// </summary>
 public class AuthService : IAuthService
 {
     private readonly UserManager<ApplicationUser> _userManager;
@@ -33,7 +37,7 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Succeeded = false,
-                Error = "An account with this email already exists."
+                Error = AuthMessages.DuplicateEmail
             };
         }
 
@@ -53,7 +57,7 @@ public class AuthService : IAuthService
             {
                 Succeeded = false,
                 Error = string.Join(
-                    "; ",
+                    AuthMessages.ErrorDelimiter,
                     result.Errors.Select(x => x.Description))
             };
         }
@@ -76,7 +80,7 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Succeeded = false,
-                Error = "Invalid email or password."
+                Error = AuthMessages.InvalidCredentials
             };
         }
 
@@ -88,7 +92,7 @@ public class AuthService : IAuthService
             return new AuthResult
             {
                 Succeeded = false,
-                Error = "Invalid email or password."
+                Error = AuthMessages.InvalidCredentials
             };
         }
 

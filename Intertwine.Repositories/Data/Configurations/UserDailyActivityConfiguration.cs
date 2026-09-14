@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures the database mapping and daily uniqueness constraint for <see cref="UserDailyActivity"/>.
+/// </summary>
 public class UserDailyActivityConfiguration
     : IEntityTypeConfiguration<UserDailyActivity>
 {

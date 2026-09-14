@@ -1,11 +1,15 @@
 ﻿using Intertwine.Domain.Abstractions;
 using Intertwine.Domain.Entities;
+using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.UserAnswers;
 using Intertwine.Services.Interfaces.Repositories;
 using Intertwine.Services.Interfaces.Services;
 
 namespace Intertwine.Services.Services
 {
+    /// <summary>
+    /// Applies the business rules for submitting and changing current user answers.
+    /// </summary>
     public class UserAnswerService : IUserAnswerService
     {
         private readonly IQuestionRepository _questionRepository;
@@ -28,6 +32,7 @@ namespace Intertwine.Services.Services
             _unitOfWork = unitOfWork;
         }
 
+        /// <inheritdoc />
         public async Task SubmitAnswerAsync(
             string identityUserId,
             int questionId,
@@ -66,10 +71,13 @@ namespace Intertwine.Services.Services
             }
             else if (existingUserAnswer != null)
             {
-                UpdateNonDailyAnswer(
+                await UpdateNonDailyAnswerAsync(
+                    userProfile.UserProfileId,
                     existingUserAnswer,
                     request.AnswerId,
-                    identityUserId);
+                    localDate,
+                    identityUserId,
+                    cancellationToken);
             }
             else
             {
@@ -95,7 +103,7 @@ namespace Intertwine.Services.Services
             if (userProfile == null)
             {
                 throw new InvalidOperationException(
-                    "User profile not found.");
+                    UserAnswerMessages.UserProfileNotFound);
             }
 
             return userProfile;
@@ -115,22 +123,40 @@ namespace Intertwine.Services.Services
             if (!belongsToQuestion)
             {
                 throw new ArgumentException(
-                    "The selected answer does not belong to this question.");
+                    UserAnswerMessages.AnswerDoesNotBelongToQuestion);
             }
         }
 
-        private static void UpdateNonDailyAnswer(
+        private async Task UpdateNonDailyAnswerAsync(
+            int userProfileId,
             UserAnswers existingUserAnswer,
             int newAnswerId,
-            string identityUserId)
+            DateOnly localDate,
+            string identityUserId,
+            CancellationToken cancellationToken)
         {
             if (existingUserAnswer.AnswerId == newAnswerId)
             {
                 throw new InvalidOperationException(
-                    "You have already selected this answer for this question.");
+                    UserAnswerMessages.ExistingNonDailyAnswer);
+            }
+
+            var activity =
+                await GetOrCreateDailyActivityAsync(
+                    userProfileId,
+                    localDate,
+                    identityUserId,
+                    cancellationToken);
+
+            if (activity.NonDailyQuestionsAnswered >= 2)
+            {
+                throw new InvalidOperationException(
+                    UserAnswerMessages.NonDailyQuestionLimitReached);
             }
 
             UpdateUserAnswer(existingUserAnswer, newAnswerId, identityUserId);
+            activity.NonDailyQuestionsAnswered++;
+            UpdateAuditFields(activity, identityUserId);
         }
 
         private async Task CreateNonDailyAnswerAsync(
@@ -150,7 +176,7 @@ namespace Intertwine.Services.Services
             if (activity.NonDailyQuestionsAnswered >= 2)
             {
                 throw new InvalidOperationException(
-                    "You have already answered two additional questions today.");
+                    UserAnswerMessages.NonDailyQuestionLimitReached);
             }
 
             activity.NonDailyQuestionsAnswered++;
@@ -187,7 +213,7 @@ namespace Intertwine.Services.Services
             if (activity.DailyQuestionCreateOrUpdateUsed)
             {
                 throw new InvalidOperationException(
-                    "You have already answered today's Daily Question.");
+                    UserAnswerMessages.DailyQuestionAlreadyAnswered);
             }
 
             if (existingUserAnswer == null)
@@ -211,6 +237,9 @@ namespace Intertwine.Services.Services
             UpdateAuditFields(activity, identityUserId);
         }
 
+        /// <summary>
+        /// Gets the activity record for a local date or stages a new record for persistence.
+        /// </summary>
         private async Task<UserDailyActivity> GetOrCreateDailyActivityAsync(
             int userProfileId,
             DateOnly localDate,

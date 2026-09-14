@@ -3,6 +3,13 @@
 ###############################################################################
 * text=auto
 
+# Keep Visual Studio source and project files consistently CRLF in the working tree.
+*.cs text eol=crlf
+*.csproj text eol=crlf
+*.slnx text eol=crlf
+*.json text eol=crlf
+*.sql text eol=crlf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #

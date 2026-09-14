@@ -7,6 +7,9 @@ using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Services.Services.Questions;
 
+/// <summary>
+/// Retrieves question data for API consumers.
+/// </summary>
 public class QuestionService : IQuestionService
 {
     private readonly IQuestionRepository _questionRepository;

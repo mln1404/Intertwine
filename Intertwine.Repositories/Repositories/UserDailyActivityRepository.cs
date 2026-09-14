@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// Provides tracked access to per-user, per-date activity records.
+/// </summary>
 public class UserDailyActivityRepository
     : IUserDailyActivityRepository
 {

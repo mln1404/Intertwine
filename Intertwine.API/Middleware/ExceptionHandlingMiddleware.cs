@@ -1,8 +1,13 @@
 ﻿using System.Net;
+using Intertwine.API.Constants;
 using System.Text.Json;
+using System.Net.Mime;
 
 namespace Intertwine.API.Middleware;
 
+/// <summary>
+/// Converts unhandled exceptions into a consistent JSON error response.
+/// </summary>
 public class ExceptionHandlingMiddleware
 {
     private readonly RequestDelegate _next;
@@ -16,6 +21,9 @@ public class ExceptionHandlingMiddleware
         _logger = logger;
     }
 
+    /// <summary>
+    /// Invokes the next middleware and handles any unhandled exception.
+    /// </summary>
     public async Task InvokeAsync(HttpContext context)
     {
         try
@@ -24,8 +32,10 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex,
-                $"Unhandled exception. TraceId: {context.TraceIdentifier}");
+            _logger.LogError(
+                ex,
+                "Unhandled exception. TraceId: {TraceId}",
+                context.TraceIdentifier);
 
             await HandleExceptionAsync(context, ex);
         }
@@ -36,7 +46,7 @@ public class ExceptionHandlingMiddleware
         Exception exception)
     {
         context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        context.Response.ContentType = "application/json";
+        context.Response.ContentType = MediaTypeNames.Application.Json;
 
         var response = new
         {
