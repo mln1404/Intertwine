@@ -10,4 +10,7 @@
   <Project Path="Intertwine.Services/Intertwine.Services.csproj" Id="c2209b61-9d9a-4507-bd8d-3b2bc6e0463e">
     <BuildDependency Project="Intertwine.Domain/Intertwine.Domain.csproj" />
   </Project>
+  <Project Path="Intertwine.UnitTests/Intertwine.UnitTests.csproj">
+    <BuildDependency Project="Intertwine.Services/Intertwine.Services.csproj" />
+  </Project>
 </Solution>
