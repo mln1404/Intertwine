@@ -50,25 +50,19 @@ public class WalletService : IWalletService
             CreditBalance = wallet?.CreditBalance ?? 0
         };
     }
-
     public async Task<TopUpResultDto> TopUpAsync(
-        string identityUserId,
-        TopUpRequest request,
-        CancellationToken cancellationToken = default)
+    string identityUserId,
+    TopUpRequest request,
+    CancellationToken cancellationToken = default)
     {
         var profile =
-            await GetUserProfileAsync(identityUserId);
+            await GetUserProfileAsync(
+                identityUserId);
 
         var package =
-            await _creditPackageRepository.GetByIdAsync(
+            await GetCreditPackageAsync(
                 request.CreditPackageId,
                 cancellationToken);
-
-        if (package == null)
-        {
-            throw new InvalidOperationException(
-                "Credit package not found or unavailable.");
-        }
 
         var wallet =
             await GetOrCreateWalletAsync(
@@ -81,30 +75,20 @@ public class WalletService : IWalletService
             package,
             identityUserId);
 
+        AddCreditsToWallet(
+            wallet,
+            package.Credits,
+            identityUserId);
+
+        var transaction = CreateFinancialTransaction(
+            wallet,
+            payment,
+            package.Credits,
+            identityUserId);
+
         await _paymentRepository.AddAsync(
             payment,
             cancellationToken);
-
-        wallet.CreditBalance += package.Credits;
-        wallet.DateUpdated = DateTime.UtcNow;
-        wallet.UpdatedBy = identityUserId;
-
-        var transaction = new FinancialTransaction
-        {
-            UserWallet = wallet,
-            UserPayment = payment,
-
-            CreditAmount = package.Credits,
-            BalanceAfterTransaction = wallet.CreditBalance,
-
-            TransactionType =
-                FinancialTransactionType.CreditPurchase,
-
-            Description = "Credit top-up",
-
-            DateCreated = DateTime.UtcNow,
-            CreatedBy = identityUserId
-        };
 
         await _financialTransactionRepository.AddAsync(
             transaction,
@@ -118,6 +102,57 @@ public class WalletService : IWalletService
             UserPaymentId = payment.UserPaymentId,
             CreditsPurchased = package.Credits,
             CreditBalance = wallet.CreditBalance
+        };
+    }
+    private async Task<CreditPackage> GetCreditPackageAsync(
+    int creditPackageId,
+    CancellationToken cancellationToken)
+    {
+        var package =
+            await _creditPackageRepository.GetByIdAsync(
+                creditPackageId,
+                cancellationToken);
+
+        if (package == null)
+        {
+            throw new InvalidOperationException(
+                "Credit package not found or unavailable.");
+        }
+
+        return package;
+    }
+
+    private static void AddCreditsToWallet(
+        UserWallet wallet,
+        long credits,
+        string identityUserId)
+    {
+        wallet.CreditBalance += credits;
+        wallet.DateUpdated = DateTime.UtcNow;
+        wallet.UpdatedBy = identityUserId;
+    }
+
+    private static FinancialTransaction CreateFinancialTransaction(
+        UserWallet wallet,
+        UserPayment payment,
+        long credits,
+        string identityUserId)
+    {
+        return new FinancialTransaction
+        {
+            UserWallet = wallet,
+            UserPayment = payment,
+
+            CreditAmount = credits,
+            BalanceAfterTransaction = wallet.CreditBalance,
+
+            TransactionType =
+                FinancialTransactionType.CreditPurchase,
+
+            Description = "Credit top-up",
+
+            DateCreated = DateTime.UtcNow,
+            CreatedBy = identityUserId
         };
     }
 
