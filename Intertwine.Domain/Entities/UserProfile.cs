@@ -37,6 +37,11 @@ namespace Intertwine.Domain.Entities
         /// Answers provided by the user.
         /// </summary>
         public ICollection<UserAnswers> UserAnswers { get; set; }
+
+        /// <summary>
+        /// Wallet containing the user's current Intertwine credit balance.
+        /// </summary>
+        public UserWallet? UserWallet { get; set; }
         
         /// <summary>
         /// FK to ASP.NET Identity's UserId

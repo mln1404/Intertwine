@@ -19,6 +19,18 @@ public class UserAnswerRepository
         _context = context;
     }
 
+    public async Task<IReadOnlyList<UserAnswers>> GetByUserProfileIdAsync(
+        int userProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.UserAnswers
+            .AsNoTracking()
+            .Include(x => x.Answer)
+            .Where(x => x.UserProfileId == userProfileId)
+            .OrderBy(x => x.Answer.QuestionId)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<UserAnswers?> GetByUserAndQuestionAsync(
         int userProfileId,
         int questionId,

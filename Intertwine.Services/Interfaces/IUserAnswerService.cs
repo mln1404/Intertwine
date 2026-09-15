@@ -5,6 +5,10 @@ namespace Intertwine.Services.Interfaces.Services;
 
 public interface IUserAnswerService
 {
+    Task<IReadOnlyList<UserAnswerSelectionDto>> GetCurrentAnswersAsync(
+        string identityUserId,
+        CancellationToken cancellationToken = default);
+
     Task SubmitAnswerAsync(
         string identityUserId,
         int questionId,

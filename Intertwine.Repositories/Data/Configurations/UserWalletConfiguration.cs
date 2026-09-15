@@ -23,12 +23,6 @@ public class UserWalletConfiguration
             .HasIndex(x => x.UserProfileId)
             .IsUnique();
 
-        builder
-            .HasOne(x => x.UserProfile)
-            .WithOne()
-            .HasForeignKey<UserWallet>(x => x.UserProfileId)
-            .OnDelete(DeleteBehavior.Cascade);
-
         builder.ToTable(t =>
         {
             t.HasCheckConstraint(

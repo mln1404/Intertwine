@@ -33,6 +33,28 @@ namespace Intertwine.Services.Services
         }
 
         /// <inheritdoc />
+        public async Task<IReadOnlyList<UserAnswerSelectionDto>> GetCurrentAnswersAsync(
+            string identityUserId,
+            CancellationToken cancellationToken = default)
+        {
+            var userProfile = await GetUserProfileAsync(
+                identityUserId,
+                cancellationToken);
+            var userAnswers = await _userAnswerRepository
+                .GetByUserProfileIdAsync(
+                    userProfile.UserProfileId,
+                    cancellationToken);
+
+            return userAnswers
+                .Select(x => new UserAnswerSelectionDto
+                {
+                    QuestionId = x.Answer.QuestionId,
+                    AnswerId = x.AnswerId
+                })
+                .ToList();
+        }
+
+        /// <inheritdoc />
         public async Task SubmitAnswerAsync(
             string identityUserId,
             int questionId,
@@ -148,7 +170,8 @@ namespace Intertwine.Services.Services
                     identityUserId,
                     cancellationToken);
 
-            if (activity.NonDailyQuestionsAnswered >= 2)
+            if (activity.NonDailyQuestionsAnswered >=
+                UserAnswerLimits.MaxNonDailyQuestionsPerDay)
             {
                 throw new InvalidOperationException(
                     UserAnswerMessages.NonDailyQuestionLimitReached);
@@ -173,7 +196,8 @@ namespace Intertwine.Services.Services
                     identityUserId,
                     cancellationToken);
 
-            if (activity.NonDailyQuestionsAnswered >= 2)
+            if (activity.NonDailyQuestionsAnswered >=
+                UserAnswerLimits.MaxNonDailyQuestionsPerDay)
             {
                 throw new InvalidOperationException(
                     UserAnswerMessages.NonDailyQuestionLimitReached);

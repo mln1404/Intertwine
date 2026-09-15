@@ -24,6 +24,7 @@ public class UserProfileServiceTests
         Assert.Equal(profile.FirstName, result.FirstName);
         Assert.Equal(profile.MiddleName, result.MiddleName);
         Assert.Equal(profile.LastName, result.LastName);
+        Assert.Equal(profile.UserWallet!.CreditBalance, result.CreditBalance);
     }
 
     [Fact]
@@ -126,6 +127,10 @@ public class UserProfileServiceTests
         AvatarName = "avatar",
         FirstName = "First",
         MiddleName = "Middle",
-        LastName = "Last"
+        LastName = "Last",
+        UserWallet = new UserWallet
+        {
+            CreditBalance = 125
+        }
     };
 }

@@ -30,6 +30,11 @@ namespace Intertwine.Repositories.Data.Configurations
                 .HasForeignKey(ua => ua.UserProfileId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.HasOne(up => up.UserWallet)
+                .WithOne(uw => uw.UserProfile)
+                .HasForeignKey<UserWallet>(uw => uw.UserProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Property(x => x.DateCreated)
                 .HasDefaultValueSql(SqlServerDefaults.UtcDateTime);
 

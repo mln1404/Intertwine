@@ -71,7 +71,8 @@ public class UserProfileService : IUserProfileService
             FirstName = userProfile.FirstName,
             LastName = userProfile.LastName,
             MiddleName = userProfile.MiddleName,
-            IdentityUserId = userProfile.IdentityUserId
+            IdentityUserId = userProfile.IdentityUserId,
+            CreditBalance = userProfile.UserWallet?.CreditBalance ?? 0
         };
     }
 }

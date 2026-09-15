@@ -1,4 +1,5 @@
-﻿using Intertwine.Identity;
+﻿using Intertwine.Domain.Entities;
+using Intertwine.Identity;
 using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
@@ -61,6 +62,23 @@ public class AuthService : IAuthService
                     result.Errors.Select(x => x.Description))
             };
         }
+
+        var userProfile = new UserProfile
+        {
+            IdentityUserId = user.Id,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            DateCreated = DateTime.UtcNow,
+            CreatedBy = user.Id,
+            UserWallet = new UserWallet
+            {
+                CreditBalance = 0,
+                DateCreated = DateTime.UtcNow,
+                CreatedBy = user.Id
+            }
+        };
+
+        await _userProfileRepository.AddAsync(userProfile);
 
         return new AuthResult
         {

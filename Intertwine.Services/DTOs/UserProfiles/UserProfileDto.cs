@@ -13,4 +13,6 @@ public class UserProfileDto
     public string MiddleName { get; set; } = string.Empty;
 
     public string IdentityUserId { get; set; } = string.Empty;
+
+    public long CreditBalance { get; set; }
 }

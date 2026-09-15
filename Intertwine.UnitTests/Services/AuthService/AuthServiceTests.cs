@@ -1,3 +1,4 @@
+using Intertwine.Domain.Entities;
 using Intertwine.Identity;
 using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.Authentication;
@@ -56,6 +57,7 @@ public class AuthServiceTests
     public async Task RegisterAsync_WhenIdentityCreationSucceeds_ReturnsUserId()
     {
         var userManager = CreateUserManager();
+        var userProfileRepository = new Mock<IUserProfileRepository>();
         userManager.Setup(x => x.FindByEmailAsync("person@example.com"))
             .ReturnsAsync((ApplicationUser?)null);
         userManager.Setup(x => x.CreateAsync(
@@ -63,13 +65,25 @@ public class AuthServiceTests
                 "Password1!"))
             .Callback<ApplicationUser, string>((user, _) => user.Id = "identity-1")
             .ReturnsAsync(IdentityResult.Success);
-        var service = CreateService(userManager);
+        userProfileRepository.Setup(x => x.AddAsync(It.IsAny<UserProfile>()))
+            .ReturnsAsync((UserProfile profile) => profile);
+        var service = CreateService(
+            userManager,
+            userProfileRepository: userProfileRepository);
 
         var result = await service.RegisterAsync(CreateRegisterRequest());
 
         Assert.True(result.Succeeded);
         Assert.Equal("identity-1", result.UserId);
         Assert.Null(result.Error);
+        userProfileRepository.Verify(x => x.AddAsync(
+            It.Is<UserProfile>(profile =>
+                profile.IdentityUserId == "identity-1" &&
+                profile.FirstName == "Test" &&
+                profile.LastName == "Person" &&
+                profile.UserWallet != null &&
+                profile.UserWallet.CreditBalance == 0)),
+            Times.Once);
     }
 
     [Theory]
@@ -151,11 +165,13 @@ public class AuthServiceTests
 
     private static Service CreateService(
         Mock<UserManager<ApplicationUser>> userManager,
-        Mock<ITokenService>? tokenService = null)
+        Mock<ITokenService>? tokenService = null,
+        Mock<IUserProfileRepository>? userProfileRepository = null)
     {
         return new Service(
             userManager.Object,
-            Mock.Of<IUserProfileRepository>(),
+            (userProfileRepository ??
+                new Mock<IUserProfileRepository>()).Object,
             (tokenService ?? new Mock<ITokenService>()).Object);
     }
 

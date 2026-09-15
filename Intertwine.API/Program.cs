@@ -60,6 +60,7 @@ builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IDailyQuestionService, DailyQuestionService>();
 builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
+builder.Services.AddScoped<IUserDailyActivityService, UserDailyActivityService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
 // Financial services

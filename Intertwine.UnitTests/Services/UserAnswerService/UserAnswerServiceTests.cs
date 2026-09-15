@@ -19,6 +19,51 @@ public class UserAnswerServiceTests
     private static readonly DateOnly LocalDate = new(2026, 9, 14);
 
     [Fact]
+    public async Task GetCurrentAnswersAsync_WhenAnswersExist_ReturnsQuestionAnswerPairs()
+    {
+        var context = CreateContext();
+        context.UserAnswers.Setup(x => x.GetByUserProfileIdAsync(
+                UserProfileId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync([
+                new UserAnswers
+                {
+                    AnswerId = AnswerId,
+                    Answer = new Answer
+                    {
+                        AnswerId = AnswerId,
+                        QuestionId = QuestionId
+                    }
+                }
+            ]);
+
+        var result = await context.Service.GetCurrentAnswersAsync(
+            IdentityUserId);
+
+        var answer = Assert.Single(result);
+        Assert.Equal(QuestionId, answer.QuestionId);
+        Assert.Equal(AnswerId, answer.AnswerId);
+    }
+
+    [Fact]
+    public async Task GetCurrentAnswersAsync_WhenProfileDoesNotExist_Throws()
+    {
+        var context = CreateContext();
+        context.UserProfiles.Setup(x =>
+                x.GetByIdentityUserIdAsync(IdentityUserId))
+            .ReturnsAsync((UserProfile?)null);
+
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(
+            () => context.Service.GetCurrentAnswersAsync(IdentityUserId));
+
+        Assert.Equal(UserAnswerMessages.UserProfileNotFound, exception.Message);
+        context.UserAnswers.Verify(x => x.GetByUserProfileIdAsync(
+                It.IsAny<int>(),
+                It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
     public async Task SubmitAnswerAsync_FirstDailyAnswer_CreatesAnswerAndConsumesDailyAction()
     {
         var context = CreateContext(isDailyQuestion: true);
