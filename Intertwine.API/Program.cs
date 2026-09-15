@@ -56,11 +56,14 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
 // Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
+builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddScoped<IDailyQuestionService, DailyQuestionService>();
 builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
 // Repository registrations
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
+builder.Services.AddScoped<IDailyQuestionRepository, DailyQuestionRepository>();
 builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
 builder.Services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();

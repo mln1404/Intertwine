@@ -54,4 +54,10 @@ public class RedisDailyQuestionCache : IDailyQuestionCache
 
     private static string CreateKey(DateOnly localDate) =>
         $"{KeyPrefix}{localDate:yyyy-MM-dd}";
+
+    public async Task RemoveAsync(DateOnly localDate, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        await _connectionMultiplexer.GetDatabase().KeyDeleteAsync(CreateKey(localDate));
+    }
 }

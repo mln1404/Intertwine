@@ -7,6 +7,9 @@ namespace Intertwine.Services.Interfaces.Repositories;
 /// </summary>
 public interface IDailyQuestionCache
 {
+    /// <summary>Removes a cached assignment after a date is ensured or recreated.</summary>
+    Task RemoveAsync(DateOnly localDate, CancellationToken cancellationToken = default);
+
     /// <summary>
     /// Gets the cached Daily Question for a local date, if one exists.
     /// </summary>

@@ -13,6 +13,8 @@ namespace Intertwine.Repositories.Data.Configurations
         {
             builder.HasKey(d => d.DailyQuestionId);
 
+            builder.HasIndex(d => d.Date).IsUnique();
+
             builder.Property(d => d.Date)
                 .IsRequired();
 

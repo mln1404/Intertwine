@@ -16,6 +16,12 @@ Redis is used for answer-submission idempotency. It is an API dependency: answer
 
 On a cache miss, the API queries the Daily Question assignment together with the question's categories and active answers, maps it to the response DTO, and stores that result in Redis. A missing assignment returns `404 Not Found` and is not cached.
 
+## Daily Question worker API
+
+The separate worker solution lives beside this repository in `../Intertwine.Worker/Intertwine.Worker.slnx`. It references the shared projects in this repository. `DailyQuestionService` owns assignment selection, and `DailyQuestionRepository` owns database reads and inserts; their interfaces, unit tests, and EF migrations remain here.
+
+See the [worker setup and demo instructions](../Intertwine.Worker/README.md) for UTC-12 scheduling, the anonymous manual endpoint, configuration, and rate limits.
+
 ## Postman answer-submission demo
 
 Obtain a bearer token through the authentication endpoint, then send:
@@ -40,6 +46,7 @@ The service commits the answer and its daily-activity update in one database sav
 ```powershell
 dotnet build Intertwine.slnx
 dotnet test Intertwine.UnitTests/Intertwine.UnitTests.csproj
+dotnet test ../Intertwine.Worker/Intertwine.Worker.slnx
 ```
 
-The unit-test project uses xUnit and Moq. It covers the core `SubmitAnswerAsync` daily-question and non-daily-question rules.
+The unit-test project uses xUnit and Moq. It covers answer-submission rules, Daily Question caching, assignment selection, idempotent reruns, and deleted-date recovery. `Intertwine.Worker.Tests` exercises UTC-12 boundaries, startup and 24-hour scheduling, recovery after failures, overlapping calls, repository queries, date uniqueness, and the anonymous endpoint's per-IP rate limit. HTTP/repository tests use a temporary SQLite database and a mocked cache; they do not connect to or modify the configured SQL Server/Redis instances. SQL Server-specific duplicate-key exception handling still requires validation against SQL Server when deploying.
