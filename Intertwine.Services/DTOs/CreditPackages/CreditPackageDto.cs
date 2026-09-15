@@ -1,11 +1,10 @@
-using Intertwine.Domain.Abstractions;
+﻿namespace Intertwine.Services.DTOs.CreditPackages;
 
-public class CreditPackage : ActivatableEntity
+public class CreditPackageDto
 {
     public int CreditPackageId { get; set; }
 
     public string CurrencyCode { get; set; } = string.Empty;
-    public Currency Currency { get; set; } = null!;
 
     public decimal Amount { get; set; }
 

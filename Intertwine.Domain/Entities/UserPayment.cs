@@ -9,7 +9,7 @@ public class UserPayment : BaseEntity
     public int UserProfileId { get; set; }
     public UserProfile UserProfile { get; set; } = null!;
 
-    public int CurrencyId { get; set; }
+    public string CurrencyCode { get; set; } = string.Empty;
     public Currency Currency { get; set; } = null!;
 
     public decimal Amount { get; set; }

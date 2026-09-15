@@ -1,6 +1,6 @@
 using Intertwine.Services.DTOs.Questions;
 
-namespace Intertwine.Services.Interfaces.Services;
+namespace Intertwine.Services.Interfaces;
 
 public interface IDailyQuestionService
 {

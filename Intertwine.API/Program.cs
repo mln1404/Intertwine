@@ -17,6 +17,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using StackExchange.Redis;
 using System.Text;
+using Intertwine.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -53,7 +54,7 @@ builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<IntertwineDbContext>()
     .AddDefaultTokenProviders();
 
-// Service registrations
+#region Service registrations
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -61,7 +62,12 @@ builder.Services.AddScoped<IDailyQuestionService, DailyQuestionService>();
 builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
-// Repository registrations
+// Financial services
+builder.Services.AddScoped<ICreditPackageService, CreditPackageService>();
+builder.Services.AddScoped<IWalletService, WalletService>();
+#endregion
+
+#region Repository registrations
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<IDailyQuestionRepository, DailyQuestionRepository>();
 builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
@@ -71,6 +77,13 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAnswerSubmissionIdempotencyStore,
     RedisAnswerSubmissionIdempotencyStore>();
 builder.Services.AddScoped<IDailyQuestionCache, RedisDailyQuestionCache>();
+
+// Financial repositories
+builder.Services.AddScoped<ICreditPackageRepository, CreditPackageRepository>();
+builder.Services.AddScoped<IFinancialTransactionRepository, FinancialTransactionRepository>();
+builder.Services.AddScoped<IUserPaymentRepository, UserPaymentRepository>();
+builder.Services.AddScoped<IUserWalletRepository, UserWalletRepository>();
+#endregion
 
 // Configure JwtSettings from configuration
 builder.Services.Configure<JwtSettings>(

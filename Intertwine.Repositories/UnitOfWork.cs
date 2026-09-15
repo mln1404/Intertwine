@@ -1,7 +1,7 @@
-using Intertwine.Repositories.Data;
+﻿using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 
-namespace Intertwine.Repositories.Repositories;
+namespace Intertwine.Repositories;
 
 /// <summary>
 /// EF Core-backed unit of work for the current database context.

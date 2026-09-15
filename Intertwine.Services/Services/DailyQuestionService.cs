@@ -1,7 +1,7 @@
 using Intertwine.Domain.Entities;
 using Intertwine.Services.DTOs.Questions;
+using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
-using Intertwine.Services.Interfaces.Services;
 
 namespace Intertwine.Services.Services;
 

@@ -56,6 +56,16 @@ namespace Intertwine.Repositories.Data
         /// </summary>
         public DbSet<UserDailyActivity> UserDailyActivities => Set<UserDailyActivity>();
 
+
+        #region Financial
+        public DbSet<UserWallet> UserWallets => Set<UserWallet>();
+        public DbSet<Currency> Currencies => Set<Currency>();
+        public DbSet<CreditPackage> CreditPackages => Set<CreditPackage>();
+        public DbSet<UserPayment> UserPayments => Set<UserPayment>();
+        public DbSet<FinancialTransaction> FinancialTransactions
+            => Set<FinancialTransaction>();
+        #endregion
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
