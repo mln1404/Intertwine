@@ -67,6 +67,25 @@ public class QuestionsController : ControllerBase
         return Ok(question);
     }
 
+    [HttpGet("daily")]
+    [AllowAnonymous]
+    /// <summary>
+    /// Retrieves the question assigned to the supplied local calendar date.
+    /// </summary>
+    public async Task<IActionResult> GetDailyQuestion(
+        [FromQuery] DateOnly localDate,
+        CancellationToken cancellationToken)
+    {
+        var question = await _questionService.GetDailyQuestionAsync(
+            localDate,
+            cancellationToken);
+
+        if (question == null)
+            return NotFound();
+
+        return Ok(question);
+    }
+
     [HttpPost("{questionId:int}/answer")]
     /// <summary>
     /// Submits the caller's answer using the local date supplied by the client.

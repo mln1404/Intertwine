@@ -15,6 +15,14 @@ public interface IQuestionRepository
         int questionId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Gets the active question assigned to the supplied local date, including
+    /// its categories and answers.
+    /// </summary>
+    Task<Question?> GetDailyQuestionByDateAsync(
+        DateOnly localDate,
+        CancellationToken cancellationToken = default);
+
     Task<bool> IsDailyQuestionAsync(
         int questionId,
         DateOnly date,

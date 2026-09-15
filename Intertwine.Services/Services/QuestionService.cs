@@ -13,10 +13,14 @@ namespace Intertwine.Services.Services.Questions;
 public class QuestionService : IQuestionService
 {
     private readonly IQuestionRepository _questionRepository;
+    private readonly IDailyQuestionCache _dailyQuestionCache;
 
-    public QuestionService(IQuestionRepository questionRepository)
+    public QuestionService(
+        IQuestionRepository questionRepository,
+        IDailyQuestionCache dailyQuestionCache)
     {
         _questionRepository = questionRepository;
+        _dailyQuestionCache = dailyQuestionCache;
     }
 
     public async Task<IEnumerable<QuestionListDto>> GetQuestionsAsync(
@@ -45,6 +49,56 @@ public class QuestionService : IQuestionService
         if (question == null)
             return null;
 
+        return MapToDetailDto(question);
+    }
+
+    public async Task<QuestionDetailDto?> GetDailyQuestionAsync(
+        DateOnly localDate,
+        CancellationToken cancellationToken = default)
+    {
+        var cachedQuestion = await _dailyQuestionCache.GetAsync(
+            localDate,
+            cancellationToken);
+        if (cachedQuestion != null)
+            return cachedQuestion;
+
+        var question = await _questionRepository.GetDailyQuestionByDateAsync(
+            localDate,
+            cancellationToken);
+        if (question == null)
+            return null;
+
+        var questionDto = MapToDetailDto(question);
+        await _dailyQuestionCache.SetAsync(
+            localDate,
+            questionDto,
+            cancellationToken);
+
+        return questionDto;
+    }
+
+    private static QuestionListDto MapToListDto(
+        Question question)
+    {
+        return new QuestionListDto
+        {
+            QuestionId = question.QuestionId,
+            QuestionTitle = question.QuestionTitle,
+            FullQuestion = question.FullQuestion,
+
+            Categories = question.QuestionCategories
+                .Select(qc => new CategoryDto
+                {
+                    CategoryId = qc.Category.CategoryId,
+                    CategoryName = qc.Category.CategoryName,
+                    Color = qc.Category.Color
+                })
+                .ToList()
+        };
+    }
+
+    private static QuestionDetailDto MapToDetailDto(Question question)
+    {
         return new QuestionDetailDto
         {
             QuestionId = question.QuestionId,
@@ -66,26 +120,6 @@ public class QuestionService : IQuestionService
                 {
                     AnswerId = a.AnswerId,
                     AnswerText = a.AnswerText
-                })
-                .ToList()
-        };
-    }
-
-    private static QuestionListDto MapToListDto(
-        Question question)
-    {
-        return new QuestionListDto
-        {
-            QuestionId = question.QuestionId,
-            QuestionTitle = question.QuestionTitle,
-            FullQuestion = question.FullQuestion,
-
-            Categories = question.QuestionCategories
-                .Select(qc => new CategoryDto
-                {
-                    CategoryId = qc.Category.CategoryId,
-                    CategoryName = qc.Category.CategoryName,
-                    Color = qc.Category.Color
                 })
                 .ToList()
         };

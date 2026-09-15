@@ -61,6 +61,21 @@ public class QuestionRepository : IQuestionRepository
                 cancellationToken);
     }
 
+    public async Task<Question?> GetDailyQuestionByDateAsync(
+        DateOnly localDate,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.DailyQuestions
+            .AsNoTracking()
+            .Where(dq => dq.Date == localDate)
+            .Select(dq => dq.Question)
+            .Where(q => q.IsActive)
+            .Include(q => q.QuestionCategories)
+                .ThenInclude(qc => qc.Category)
+            .Include(q => q.Answers)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<bool> IsDailyQuestionAsync(
         int questionId,
         DateOnly date,

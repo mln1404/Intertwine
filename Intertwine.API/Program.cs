@@ -67,6 +67,7 @@ builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAnswerSubmissionIdempotencyStore,
     RedisAnswerSubmissionIdempotencyStore>();
+builder.Services.AddScoped<IDailyQuestionCache, RedisDailyQuestionCache>();
 
 // Configure JwtSettings from configuration
 builder.Services.Configure<JwtSettings>(

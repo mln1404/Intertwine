@@ -11,4 +11,11 @@ public interface IQuestionService
     Task<QuestionDetailDto?> GetQuestionByIdAsync(
         int questionId,
         CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the Daily Question assigned to a local calendar date.
+    /// </summary>
+    Task<QuestionDetailDto?> GetDailyQuestionAsync(
+        DateOnly localDate,
+        CancellationToken cancellationToken = default);
 }

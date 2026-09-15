@@ -10,6 +10,12 @@ Intertwine is a layered ASP.NET Core API for question-based user matching. The s
 
 Redis is used for answer-submission idempotency. It is an API dependency: answer submissions will fail rather than risk duplicate processing when Redis is unavailable.
 
+## Daily Question caching
+
+`GET /api/questions/daily?localDate=2026-09-15` is anonymous and uses a cache-aside Redis read. Its key contains the supplied local date, so users at UTC+14 and UTC-12 can receive and cache their respective Daily Questions independently. Each date-specific value expires after 24 hours.
+
+On a cache miss, the API queries the Daily Question assignment together with the question's categories and active answers, maps it to the response DTO, and stores that result in Redis. A missing assignment returns `404 Not Found` and is not cached.
+
 ## Postman answer-submission demo
 
 Obtain a bearer token through the authentication endpoint, then send:
