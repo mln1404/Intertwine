@@ -60,4 +60,13 @@ public class WalletController : ControllerBase
 
         return Ok(result);
     }
+
+    [HttpGet("payments")]
+    public async Task<IActionResult> GetPayments([FromQuery] int page = 1, CancellationToken cancellationToken = default)
+    {
+        var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(identityUserId)) return Unauthorized();
+        if (page < 1 || page > 100000) return BadRequest(new { message = "Invalid page number." });
+        return Ok(await _walletService.GetPaymentsAsync(identityUserId, page, cancellationToken));
+    }
 }

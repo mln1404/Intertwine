@@ -26,6 +26,9 @@ public class UserAnswerRepository
         return await _context.UserAnswers
             .AsNoTracking()
             .Include(x => x.Answer)
+                .ThenInclude(x => x.Question)
+                .ThenInclude(x => x.QuestionCategories)
+                .ThenInclude(x => x.Category)
             .Where(x => x.UserProfileId == userProfileId)
             .OrderBy(x => x.Answer.QuestionId)
             .ToListAsync(cancellationToken);

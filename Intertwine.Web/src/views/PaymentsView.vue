@@ -1,0 +1,82 @@
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useIntertwine } from '../composables/useIntertwine'
+import type { PaymentHistory } from '../models/question'
+const { loadPayments, reportError, canUseAccount, authOpen } = useIntertwine()
+const payments = ref<PaymentHistory[]>([])
+const page = ref(1)
+const busy = ref(false)
+const error = ref('')
+async function load(nextPage = page.value) {
+  if (!canUseAccount.value || busy.value) return
+  busy.value = true
+  error.value = ''
+  try {
+    payments.value = await loadPayments(nextPage)
+    page.value = nextPage
+  } catch (cause) {
+    error.value = reportError(cause)
+  } finally {
+    busy.value = false
+  }
+}
+function date(value: string) {
+  return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`).toLocaleString()
+}
+onMounted(() => load())
+</script>
+<template>
+  <header class="page-heading">
+    <div>
+      <p class="eyebrow">YOUR SPARKS</p>
+      <h1>Payment history</h1>
+      <p class="muted">Your Spark top-ups, all in one place.</p>
+    </div>
+    <a class="button primary" href="#wallet">Get Sparky ✨</a>
+  </header>
+  <div v-if="!canUseAccount" class="empty-state panel">
+    <p>Sign in to see your payments.</p>
+    <button class="button primary" @click="authOpen = true">Sign in</button>
+  </div>
+  <section v-else class="panel payment-history">
+    <p v-if="busy" role="status">Loading payments…</p>
+    <div v-if="error" class="inline-message error" role="alert">
+      {{ error }}
+      <button class="text-button" @click="load()">Try again</button>
+    </div>
+    <p v-if="!busy && !error && !payments.length" class="muted">No payments on this page yet.</p>
+    <article v-for="payment in payments" :key="payment.userPaymentId" class="payment-row">
+      <div>
+        <strong>+{{ payment.sparksPurchased.toLocaleString() }} ✨</strong>
+        <p class="small muted">{{ date(payment.dateCreated) }} · #{{ payment.userPaymentId }}</p>
+      </div>
+      <div>
+        <strong>
+          {{
+            new Intl.NumberFormat(undefined, {
+              style: 'currency',
+              currency: payment.currencyCode,
+            }).format(payment.amount)
+          }}
+        </strong>
+        <p class="small">
+          {{ payment.status
+          }}{{ payment.paymentProvider === 'IntertwineDemo' ? ' · Simulated, no charge' : '' }}
+        </p>
+      </div>
+    </article>
+    <nav class="form-actions" aria-label="Payment pages">
+      <button class="button secondary" :disabled="busy || page === 1" @click="load(page - 1)">
+        Previous
+      </button>
+      <span>Page {{ page }}</span>
+      <button
+        class="button secondary"
+        :disabled="busy || payments.length < 20"
+        @click="load(page + 1)"
+      >
+        Next
+      </button>
+    </nav>
+  </section>
+</template>

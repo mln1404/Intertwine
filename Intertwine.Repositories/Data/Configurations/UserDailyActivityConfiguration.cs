@@ -23,10 +23,12 @@ public class UserDailyActivityConfiguration
 
         builder
             .Property(x => x.NonDailyQuestionsAnswered)
+            .IsConcurrencyToken()
             .HasDefaultValue(0);
 
         builder
             .Property(x => x.DailyQuestionCreateOrUpdateUsed)
+            .IsConcurrencyToken()
             .HasDefaultValue(false);
 
         builder

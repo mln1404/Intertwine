@@ -17,19 +17,25 @@ namespace Intertwine.Services.Services
         private readonly IUserDailyActivityRepository _userDailyActivityRepository;
         private readonly IUserProfileRepository _userProfileRepository;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IUserWalletRepository _walletRepository;
+        private readonly IFinancialTransactionRepository _transactionRepository;
 
         public UserAnswerService(
             IQuestionRepository questionRepository,
             IUserAnswerRepository userAnswerRepository,
             IUserDailyActivityRepository userDailyActivityRepository,
             IUserProfileRepository userProfileRepository,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            IUserWalletRepository walletRepository,
+            IFinancialTransactionRepository transactionRepository)
         {
             _questionRepository = questionRepository;
             _userAnswerRepository = userAnswerRepository;
             _userDailyActivityRepository = userDailyActivityRepository;
             _userProfileRepository = userProfileRepository;
             _unitOfWork = unitOfWork;
+            _walletRepository = walletRepository;
+            _transactionRepository = transactionRepository;
         }
 
         /// <inheritdoc />
@@ -49,7 +55,16 @@ namespace Intertwine.Services.Services
                 .Select(x => new UserAnswerSelectionDto
                 {
                     QuestionId = x.Answer.QuestionId,
-                    AnswerId = x.AnswerId
+                    AnswerId = x.AnswerId,
+                    AnswerText = x.Answer.AnswerText,
+                    QuestionTitle = x.Answer.Question?.QuestionTitle ?? string.Empty,
+                    FullQuestion = x.Answer.Question?.FullQuestion ?? string.Empty,
+                    Categories = x.Answer.Question?.QuestionCategories.Select(qc => new Intertwine.Services.DTOs.Categories.CategoryDto
+                    {
+                        CategoryId = qc.Category.CategoryId,
+                        CategoryName = qc.Category.CategoryName,
+                        Color = qc.Category.Color
+                    }).ToList() ?? []
                 })
                 .ToList();
         }
@@ -99,6 +114,7 @@ namespace Intertwine.Services.Services
                     request.AnswerId,
                     localDate,
                     identityUserId,
+                    request.SpendSparks,
                     cancellationToken);
             }
             else
@@ -108,6 +124,7 @@ namespace Intertwine.Services.Services
                     request.AnswerId,
                     localDate,
                     identityUserId,
+                    request.SpendSparks,
                     cancellationToken);
             }
 
@@ -155,6 +172,7 @@ namespace Intertwine.Services.Services
             int newAnswerId,
             DateOnly localDate,
             string identityUserId,
+            bool spendSparks,
             CancellationToken cancellationToken)
         {
             if (existingUserAnswer.AnswerId == newAnswerId)
@@ -170,12 +188,7 @@ namespace Intertwine.Services.Services
                     identityUserId,
                     cancellationToken);
 
-            if (activity.NonDailyQuestionsAnswered >=
-                UserAnswerLimits.MaxNonDailyQuestionsPerDay)
-            {
-                throw new InvalidOperationException(
-                    UserAnswerMessages.NonDailyQuestionLimitReached);
-            }
+            await ChargeExtraAnswerAsync(activity, spendSparks, identityUserId, cancellationToken);
 
             UpdateUserAnswer(existingUserAnswer, newAnswerId, identityUserId);
             activity.NonDailyQuestionsAnswered++;
@@ -187,6 +200,7 @@ namespace Intertwine.Services.Services
             int answerId,
             DateOnly localDate,
             string identityUserId,
+            bool spendSparks,
             CancellationToken cancellationToken)
         {
             var activity =
@@ -196,12 +210,7 @@ namespace Intertwine.Services.Services
                     identityUserId,
                     cancellationToken);
 
-            if (activity.NonDailyQuestionsAnswered >=
-                UserAnswerLimits.MaxNonDailyQuestionsPerDay)
-            {
-                throw new InvalidOperationException(
-                    UserAnswerMessages.NonDailyQuestionLimitReached);
-            }
+            await ChargeExtraAnswerAsync(activity, spendSparks, identityUserId, cancellationToken);
 
             activity.NonDailyQuestionsAnswered++;
             UpdateAuditFields(activity, identityUserId);
@@ -217,6 +226,29 @@ namespace Intertwine.Services.Services
             await _userAnswerRepository.AddAsync(
                 userAnswer,
                 cancellationToken);
+        }
+
+        /// <summary>Stages the debit alongside the answer; the single SaveChanges commits both or neither.</summary>
+        private async Task ChargeExtraAnswerAsync(UserDailyActivity activity, bool consent,
+            string identityUserId, CancellationToken cancellationToken)
+        {
+            if (activity.NonDailyQuestionsAnswered < UserAnswerLimits.MaxNonDailyQuestionsPerDay) return;
+            if (!consent) throw new InvalidOperationException(UserAnswerMessages.NonDailyQuestionLimitReached);
+            var wallet = await _walletRepository.GetByUserProfileIdAsync(activity.UserProfileId, cancellationToken);
+            if (wallet is null || wallet.CreditBalance < SparkRules.ExtraAnswerCost)
+                throw new InvalidOperationException(SparkRules.InsufficientBalance);
+            wallet.CreditBalance -= SparkRules.ExtraAnswerCost;
+            UpdateAuditFields(wallet, identityUserId);
+            await _transactionRepository.AddAsync(new FinancialTransaction
+            {
+                UserWallet = wallet,
+                CreditAmount = -SparkRules.ExtraAnswerCost,
+                BalanceAfterTransaction = wallet.CreditBalance,
+                TransactionType = Intertwine.Domain.Enums.FinancialTransactionType.CreditSpend,
+                Description = SparkRules.ExtraAnswerDescription,
+                DateCreated = DateTime.UtcNow,
+                CreatedBy = identityUserId
+            }, cancellationToken);
         }
 
         private async Task SubmitDailyQuestionAnswerAsync(

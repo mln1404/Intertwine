@@ -11,7 +11,7 @@ public static class UserAnswerMessages
     public const string ExistingNonDailyAnswer =
         "You have already selected this answer for this question.";
     public const string NonDailyQuestionLimitReached =
-        "You have already answered two additional questions today.";
+        "Your two free question actions are used. Confirm spending 10 Sparks for an extra answer or update.";
     public const string DailyQuestionAlreadyAnswered =
         "You have already answered today's Daily Question.";
 }

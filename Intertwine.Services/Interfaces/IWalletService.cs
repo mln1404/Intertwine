@@ -4,6 +4,8 @@ namespace Intertwine.Services.Interfaces;
 
 public interface IWalletService
 {
+    Task<IReadOnlyList<PaymentHistoryDto>> GetPaymentsAsync(string identityUserId, int page = 1,
+        CancellationToken cancellationToken = default);
     Task<WalletDto> GetWalletAsync(
         string identityUserId,
         CancellationToken cancellationToken = default);

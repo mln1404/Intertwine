@@ -50,6 +50,20 @@ public class WalletService : IWalletService
             CreditBalance = wallet?.CreditBalance ?? 0
         };
     }
+
+    public async Task<IReadOnlyList<PaymentHistoryDto>> GetPaymentsAsync(string identityUserId, int page = 1,
+        CancellationToken cancellationToken = default)
+    {
+        if (page < 1 || page > 100000) throw new ArgumentOutOfRangeException(nameof(page));
+        var profile = await GetUserProfileAsync(identityUserId);
+        var payments = await _paymentRepository.GetByUserProfileIdAsync(profile.UserProfileId, (page - 1) * 20, 20, cancellationToken);
+        return payments.Select(x => new PaymentHistoryDto
+        {
+            UserPaymentId = x.UserPaymentId, DateCreated = x.DateCreated,
+            CurrencyCode = x.CurrencyCode, Amount = x.Amount,
+            SparksPurchased = x.CreditsPurchased, Status = x.Status.ToString(), PaymentProvider = x.PaymentProvider
+        }).ToList();
+    }
     public async Task<TopUpResultDto> TopUpAsync(
     string identityUserId,
     TopUpRequest request,

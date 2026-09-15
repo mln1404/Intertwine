@@ -10,6 +10,28 @@ namespace Intertwine.UnitTests.Services.WalletService;
 public class WalletServiceTests
 {
     [Fact]
+    public async Task GetPayments_UsesAuthenticatedProfileAndPagesPurchaseSnapshots()
+    {
+        var context = CreateContext();
+        context.Payments.Setup(x => x.GetByUserProfileIdAsync(12, 20, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([new UserPayment { UserPaymentId = 99, CreditsPurchased = 1000, Amount = 9.99m, CurrencyCode = "AUD", Status = PaymentStatus.Completed, PaymentProvider = "IntertwineDemo" }]);
+        var result = await context.Service.GetPaymentsAsync("identity-12", 2);
+        var payment = Assert.Single(result);
+        Assert.Equal(1000, payment.SparksPurchased);
+        Assert.Equal("Completed", payment.Status);
+        Assert.Equal(9.99m, payment.Amount);
+        context.Payments.Verify(x => x.GetByUserProfileIdAsync(12, 20, 20, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPayments_MissingProfileCannotReadHistory()
+    {
+        var context = CreateContext(false);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.Service.GetPaymentsAsync("unknown"));
+        context.Payments.Verify(x => x.GetByUserProfileIdAsync(It.IsAny<int>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetWalletAsync_WhenWalletExists_ReturnsCurrentBalance()
     {
         var context = CreateContext();

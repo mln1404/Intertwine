@@ -32,7 +32,9 @@ public class UserAnswerServiceTests
                     Answer = new Answer
                     {
                         AnswerId = AnswerId,
-                        QuestionId = QuestionId
+                        QuestionId = QuestionId,
+                        AnswerText = "Honesty",
+                        Question = new Question { QuestionTitle = "Your values", FullQuestion = "What matters most?", QuestionCategories = [new QuestionCategories { Category = new Category { CategoryId = 1, CategoryName = "Values", Color = "#3E5947" } }] }
                     }
                 }
             ]);
@@ -43,6 +45,9 @@ public class UserAnswerServiceTests
         var answer = Assert.Single(result);
         Assert.Equal(QuestionId, answer.QuestionId);
         Assert.Equal(AnswerId, answer.AnswerId);
+        Assert.Equal("Honesty", answer.AnswerText);
+        Assert.Equal("Your values", answer.QuestionTitle);
+        Assert.Equal("#3E5947", Assert.Single(answer.Categories).Color);
     }
 
     [Fact]
@@ -210,6 +215,71 @@ public class UserAnswerServiceTests
         VerifyNotSaved(context);
     }
 
+    [Theory]
+    [InlineData(false, 25)]
+    [InlineData(true, 25)]
+    [InlineData(false, 10)]
+    public async Task PaidAnswer_ChargesTenAndStagesLedgerWithAnswer(bool updating, long openingBalance)
+    {
+        var context = CreateContext();
+        var activity = CreateActivity(2);
+        var wallet = new UserWallet { CreditBalance = openingBalance, UserProfileId = UserProfileId };
+        context.DailyActivities.Setup(x => x.GetByUserAndDateAsync(UserProfileId, LocalDate, It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        context.Wallets.Setup(x => x.GetByUserProfileIdAsync(UserProfileId, It.IsAny<CancellationToken>())).ReturnsAsync(wallet);
+        if (updating) context.UserAnswers.Setup(x => x.GetByUserAndQuestionAsync(UserProfileId, QuestionId, It.IsAny<CancellationToken>())).ReturnsAsync(new UserAnswers { AnswerId = AnswerId + 1 });
+        await context.Service.SubmitAnswerAsync(IdentityUserId, QuestionId, new() { AnswerId = AnswerId, SpendSparks = true }, LocalDate);
+        Assert.Equal(openingBalance - 10, wallet.CreditBalance);
+        Assert.Equal(3, activity.NonDailyQuestionsAnswered);
+        context.Transactions.Verify(x => x.AddAsync(It.Is<FinancialTransaction>(t => t.CreditAmount == -10 && t.BalanceAfterTransaction == openingBalance - 10 && t.UserWallet == wallet && t.TransactionType == Intertwine.Domain.Enums.FinancialTransactionType.CreditSpend), It.IsAny<CancellationToken>()), Times.Once);
+        VerifySavedOnce(context);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(9)]
+    public async Task PaidAnswer_InsufficientBalanceDoesNotSave(long balance)
+    {
+        var context = CreateContext();
+        var activity = CreateActivity(2);
+        var wallet = new UserWallet { CreditBalance = balance };
+        context.DailyActivities.Setup(x => x.GetByUserAndDateAsync(UserProfileId, LocalDate, It.IsAny<CancellationToken>())).ReturnsAsync(activity);
+        context.Wallets.Setup(x => x.GetByUserProfileIdAsync(UserProfileId, It.IsAny<CancellationToken>())).ReturnsAsync(wallet);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.Service.SubmitAnswerAsync(IdentityUserId, QuestionId, new() { AnswerId = AnswerId, SpendSparks = true }, LocalDate));
+        Assert.Equal(balance, wallet.CreditBalance);
+        Assert.Equal(2, activity.NonDailyQuestionsAnswered);
+        VerifyNotSaved(context);
+        context.Transactions.Verify(x => x.AddAsync(It.IsAny<FinancialTransaction>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task PaidConsent_WithFreeAllowanceDoesNotDebit()
+    {
+        var context = CreateContext();
+        await context.Service.SubmitAnswerAsync(IdentityUserId, QuestionId, new() { AnswerId = AnswerId, SpendSparks = true }, LocalDate);
+        context.Wallets.Verify(x => x.GetByUserProfileIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerifySavedOnce(context);
+    }
+
+    [Fact]
+    public async Task PaidConsent_UnchangedAnswerDoesNotDebit()
+    {
+        var context = CreateContext();
+        context.UserAnswers.Setup(x => x.GetByUserAndQuestionAsync(UserProfileId, QuestionId, It.IsAny<CancellationToken>())).ReturnsAsync(new UserAnswers { AnswerId = AnswerId });
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.Service.SubmitAnswerAsync(IdentityUserId, QuestionId, new() { AnswerId = AnswerId, SpendSparks = true }, LocalDate));
+        context.Wallets.Verify(x => x.GetByUserProfileIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNotSaved(context);
+    }
+
+    [Fact]
+    public async Task PaidConsent_DoesNotUnlockDailyQuestion()
+    {
+        var context = CreateContext(true);
+        context.DailyActivities.Setup(x => x.GetByUserAndDateAsync(UserProfileId, LocalDate, It.IsAny<CancellationToken>())).ReturnsAsync(CreateActivity(2, true));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => context.Service.SubmitAnswerAsync(IdentityUserId, QuestionId, new() { AnswerId = AnswerId, SpendSparks = true }, LocalDate));
+        context.Wallets.Verify(x => x.GetByUserProfileIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        VerifyNotSaved(context);
+    }
+
     private static UserAnswerServiceContext CreateContext(bool isDailyQuestion = false)
     {
         var questions = new Mock<IQuestionRepository>();
@@ -272,7 +342,9 @@ public class UserAnswerServiceTests
                 UserAnswers.Object,
                 DailyActivities.Object,
                 UserProfiles.Object,
-                UnitOfWork.Object);
+                UnitOfWork.Object,
+                Wallets.Object,
+                Transactions.Object);
         }
 
         public Mock<IQuestionRepository> Questions { get; }
@@ -280,6 +352,8 @@ public class UserAnswerServiceTests
         public Mock<IUserDailyActivityRepository> DailyActivities { get; }
         public Mock<IUserProfileRepository> UserProfiles { get; }
         public Mock<IUnitOfWork> UnitOfWork { get; }
+        public Mock<IUserWalletRepository> Wallets { get; } = new();
+        public Mock<IFinancialTransactionRepository> Transactions { get; } = new();
         public UserAnswerServiceUnderTest Service { get; }
     }
 }

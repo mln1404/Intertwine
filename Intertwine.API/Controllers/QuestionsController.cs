@@ -112,7 +112,7 @@ public class QuestionsController : ControllerBase
         }
 
         var requestFingerprint =
-            $"{questionId}:{request.AnswerId}:{localDate:O}";
+            $"{questionId}:{request.AnswerId}:{localDate:O}:{request.SpendSparks}";
         var idempotencyStatus = await _idempotencyStore.TryAcquireAsync(
             identityUserId,
             idempotencyKey,

@@ -1,5 +1,6 @@
 ﻿using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories;
 
@@ -16,9 +17,16 @@ public class UnitOfWork : IUnitOfWork
     }
 
     /// <inheritdoc />
-    public Task<int> SaveChangesAsync(
+    public async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)
     {
-        return _context.SaveChangesAsync(cancellationToken);
+        try
+        {
+            return await _context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            throw new InvalidOperationException("Your balance or activity changed in another request. Refresh and try again.", ex);
+        }
     }
 }

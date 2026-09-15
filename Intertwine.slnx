@@ -14,5 +14,9 @@
   <Project Path="Intertwine.UnitTests/Intertwine.UnitTests.csproj">
     <BuildDependency Project="Intertwine.Services/Intertwine.Services.csproj" />
   </Project>
+  <Project Path="Intertwine.Web/Intertwine.Web.esproj">
+    <Build />
+    <Deploy />
+  </Project>
   <Project Path="Intertwine.Worker/Intertwine.Worker.csproj" />
 </Solution>
