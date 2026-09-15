@@ -1,0 +1,81 @@
+{
+  "info": {
+    "_postman_id": "73efad3f-65c0-4468-a37b-20fb79bc1ef8",
+    "name": "Intertwine - Top Up",
+    "description": "A simple authenticated request for adding a credit package to the current user's wallet.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Top Up Wallet",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Wallet top-up succeeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{accessToken}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"creditPackageId\": {{creditPackageId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/wallet/top-up",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "wallet",
+            "top-up"
+          ]
+        }
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:7279",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "creditPackageId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

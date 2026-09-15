@@ -15,8 +15,7 @@ public class DailyQuestionServiceTests
     {
         var repository = new MemoryRepository(new(1, [1], null), new(2, [2], null));
         repository.Assignments.Add(new DailyQuestion { Date = Today.AddDays(3), QuestionId = 2 });
-        var cache = new Mock<IDailyQuestionCache>();
-        var service = new Service(repository, cache.Object, TimeProvider.System);
+        var service = new Service(repository, TimeProvider.System);
 
         var first = await service.EnsureDailyQuestionsAsync(Today);
         var second = await service.EnsureDailyQuestionsAsync(Today);
@@ -26,7 +25,6 @@ public class DailyQuestionServiceTests
         Assert.Equal(8, repository.Assignments.Count);
         Assert.Equal(2, repository.Assignments.Single(x => x.Date == Today.AddDays(3)).QuestionId);
         Assert.All(repository.Assignments, x => Assert.InRange(x.Date, Today, Today.AddDays(7)));
-        cache.Verify(x => x.RemoveAsync(Today.AddDays(3), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -93,11 +91,10 @@ public class DailyQuestionServiceTests
     }
 
     [Fact]
-    public async Task RecreatesDeletedDateAndEvictsItsCachedAssignment()
+    public async Task RecreatesDeletedDate()
     {
         var repository = new MemoryRepository(new(1, [1], null), new(2, [2], null));
-        var cache = new Mock<IDailyQuestionCache>();
-        var service = new Service(repository, cache.Object, TimeProvider.System);
+        var service = new Service(repository, TimeProvider.System);
         await service.EnsureDailyQuestionsAsync(Today);
         repository.Assignments.RemoveAll(x => x.Date == Today.AddDays(4));
 
@@ -105,7 +102,6 @@ public class DailyQuestionServiceTests
 
         Assert.Equal(1, result.Created);
         Assert.Equal(7, result.AlreadyExisted);
-        cache.Verify(x => x.RemoveAsync(Today.AddDays(4), It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -116,31 +112,12 @@ public class DailyQuestionServiceTests
             .ReturnsAsync(new DailyQuestionSelection([new(1, [1], null)], new Dictionary<int, int>()));
         repository.Setup(x => x.TryInsertAsync(It.IsAny<DailyQuestion>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        var service = new Service(repository.Object, Mock.Of<IDailyQuestionCache>(), TimeProvider.System);
+        var service = new Service(repository.Object, TimeProvider.System);
 
         var result = await service.EnsureDailyQuestionsAsync(Today, 0);
 
         Assert.Equal(0, result.Created);
         Assert.Equal(1, result.AlreadyExisted);
-    }
-
-    [Fact]
-    public async Task RetryAfterCacheFailurePreservesCommittedAssignmentAndRetriesEviction()
-    {
-        var repository = new MemoryRepository(new DailyQuestionCandidate(1, [1], null));
-        var cache = new Mock<IDailyQuestionCache>();
-        cache.SetupSequence(x => x.RemoveAsync(Today, It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("Simulated Redis outage"))
-            .Returns(Task.CompletedTask);
-        var service = new Service(repository, cache.Object, TimeProvider.System);
-        await Assert.ThrowsAsync<InvalidOperationException>(() => service.EnsureDailyQuestionsAsync(Today, 0));
-
-        var result = await service.EnsureDailyQuestionsAsync(Today, 0);
-
-        Assert.Equal(0, result.Created);
-        Assert.Equal(1, result.AlreadyExisted);
-        Assert.Single(repository.Assignments);
-        cache.Verify(x => x.RemoveAsync(Today, It.IsAny<CancellationToken>()), Times.Exactly(2));
     }
 
     [Fact]
@@ -163,7 +140,7 @@ public class DailyQuestionServiceTests
     }
 
     private static Service CreateService(MemoryRepository repository) =>
-        new(repository, Mock.Of<IDailyQuestionCache>(), TimeProvider.System);
+        new(repository, TimeProvider.System);
 
     private sealed class MemoryRepository(params DailyQuestionCandidate[] candidates) : IDailyQuestionRepository
     {

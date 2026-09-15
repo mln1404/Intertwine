@@ -1,0 +1,335 @@
+{
+  "info": {
+    "_postman_id": "6c9951bd-3991-4a95-8a70-7103136ea26c",
+    "name": "Intertwine - Questions",
+    "description": "Requests for authenticating, retrieving questions, and submitting answers through the Intertwine REST API.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const now = new Date();",
+          "const year = now.getFullYear();",
+          "const month = String(now.getMonth() + 1).padStart(2, '0');",
+          "const day = String(now.getDate()).padStart(2, '0');",
+          "pm.collectionVariables.set('localDate', `${year}-${month}-${day}`);"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Login succeeded', () => pm.response.to.have.status(200));",
+              "const response = pm.response.json();",
+              "pm.test('Access token was returned', () => pm.expect(response.token).to.be.a('string').and.not.empty);",
+              "if (response.token) pm.collectionVariables.set('accessToken', response.token);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/Auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "Auth",
+            "login"
+          ]
+        },
+        "description": "Authenticates a user and saves the returned JWT as the collection variable accessToken."
+      }
+    },
+    {
+      "name": "2. Get Active Questions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Questions were returned', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/questions",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "questions"
+          ]
+        },
+        "description": "Returns all active questions. This request inherits the collection's bearer token."
+      }
+    },
+    {
+      "name": "3. Get Questions by Category",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Filtered questions were returned', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/questions?categoryId={{categoryId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "questions"
+          ],
+          "query": [
+            {
+              "key": "categoryId",
+              "value": "{{categoryId}}"
+            }
+          ]
+        },
+        "description": "Returns active questions associated with categoryId."
+      }
+    },
+    {
+      "name": "4. Get Question with Answers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Question was returned', () => pm.response.to.have.status(200));",
+              "pm.test('Question contains answers', () => pm.expect(pm.response.json().answers).to.be.an('array'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/questions/{{questionId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "questions",
+            "{{questionId}}"
+          ]
+        },
+        "description": "Returns one active question together with its active answer choices."
+      }
+    },
+    {
+      "name": "5. Get Daily Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Daily Question request was handled', () => pm.expect(pm.response.code).to.be.oneOf([200, 404]));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/questions/daily?localDate={{localDate}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "questions",
+            "daily"
+          ],
+          "query": [
+            {
+              "key": "localDate",
+              "value": "{{localDate}}"
+            }
+          ]
+        },
+        "description": "Returns the Redis-cached Daily Question for the client's local date. This endpoint is anonymous."
+      }
+    },
+    {
+      "name": "6. Submit Answer",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('idempotencyKey')) {",
+              "  pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));",
+              "}"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('Answer submission succeeded', () => pm.response.to.have.status(200));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Idempotency-Key",
+            "value": "{{idempotencyKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"answerId\": {{answerId}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/questions/{{questionId}}/answer?localDate={{localDate}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "questions",
+            "{{questionId}}",
+            "answer"
+          ],
+          "query": [
+            {
+              "key": "localDate",
+              "value": "{{localDate}}"
+            }
+          ]
+        },
+        "description": "Submits answerId for questionId. The idempotency key is generated once and retained so sending this request again demonstrates an idempotent replay. Clear the collection variable idempotencyKey before a new logical answer action."
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://localhost:7279",
+      "type": "string"
+    },
+    {
+      "key": "email",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "categoryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "questionId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "answerId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "localDate",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "idempotencyKey",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

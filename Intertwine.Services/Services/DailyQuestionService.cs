@@ -8,7 +8,6 @@ namespace Intertwine.Services.Services;
 /// <summary>Assigns questions to dates using category balance, then least-recent reuse.</summary>
 public sealed class DailyQuestionService(
     IDailyQuestionRepository repository,
-    IDailyQuestionCache cache,
     TimeProvider timeProvider) : IDailyQuestionService
 {
     public async Task<EnsureDailyQuestionsResult> EnsureDailyQuestionsAsync(
@@ -51,8 +50,6 @@ public sealed class DailyQuestionService(
                     existing++;
             }
 
-            // Also clears existing dates: rerunning repairs a failed eviction after a committed insert.
-            await cache.RemoveAsync(date, cancellationToken);
         }
 
         return new EnsureDailyQuestionsResult(startDate, endDate, created, existing);
