@@ -2,6 +2,7 @@ using Intertwine.API.Constants;
 using Intertwine.API.Middleware;
 using Intertwine.Identity;
 using Intertwine.Repositories.Data;
+using Intertwine.Repositories.Caching;
 using Intertwine.Repositories.Repositories;
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.Services.Interfaces;
@@ -14,6 +15,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using StackExchange.Redis;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -36,6 +38,17 @@ if (string.IsNullOrEmpty(connectionString))
 builder.Services.AddDbContext<IntertwineDbContext>(options =>
     options.UseSqlServer(connectionString));
 
+var redisConnectionString = builder.Configuration.GetConnectionString(
+    ApplicationSettings.RedisConnection);
+if (string.IsNullOrWhiteSpace(redisConnectionString))
+{
+    throw new InvalidOperationException(
+        $"Connection string '{ApplicationSettings.RedisConnection}' is not configured.");
+}
+
+builder.Services.AddSingleton<IConnectionMultiplexer>(
+    _ => ConnectionMultiplexer.Connect(redisConnectionString));
+
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
     .AddEntityFrameworkStores<IntertwineDbContext>()
     .AddDefaultTokenProviders();
@@ -52,6 +65,8 @@ builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
 builder.Services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IAnswerSubmissionIdempotencyStore,
+    RedisAnswerSubmissionIdempotencyStore>();
 
 // Configure JwtSettings from configuration
 builder.Services.Configure<JwtSettings>(
