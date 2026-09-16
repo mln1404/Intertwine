@@ -361,6 +361,7 @@ namespace Intertwine.Repositories.Data.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserAnswerId"));
 
                     b.Property<int>("AnswerId")
+                        .IsConcurrencyToken()
                         .HasColumnType("int");
 
                     b.Property<string>("CreatedBy")
@@ -403,6 +404,7 @@ namespace Intertwine.Repositories.Data.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<bool>("DailyQuestionCreateOrUpdateUsed")
+                        .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(false);
@@ -417,6 +419,7 @@ namespace Intertwine.Repositories.Data.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("NonDailyQuestionsAnswered")
+                        .IsConcurrencyToken()
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
                         .HasDefaultValue(0);
@@ -984,7 +987,7 @@ namespace Intertwine.Repositories.Data.Migrations
             modelBuilder.Entity("UserWallet", b =>
                 {
                     b.HasOne("Intertwine.Domain.Entities.UserProfile", "UserProfile")
-                        .WithOne()
+                        .WithOne("UserWallet")
                         .HasForeignKey("UserWallet", "UserProfileId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1009,6 +1012,8 @@ namespace Intertwine.Repositories.Data.Migrations
             modelBuilder.Entity("Intertwine.Domain.Entities.UserProfile", b =>
                 {
                     b.Navigation("UserAnswers");
+
+                    b.Navigation("UserWallet");
                 });
 
             modelBuilder.Entity("Intertwine.Identity.ApplicationUser", b =>
