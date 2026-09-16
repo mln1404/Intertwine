@@ -16,6 +16,8 @@ Redis is used for answer-submission idempotency. It is an API dependency: answer
 
 On a cache miss, the API queries the Daily Question assignment together with the question's categories and active answers, maps it to the response DTO, and stores that result in Redis. A missing assignment returns `404 Not Found` and is not cached.
 
+If Redis is temporarily unavailable, Daily Question cache reads fail open: the API logs a warning and queries SQL immediately. Cache writes and removals are skipped until the connection recovers. Answer-submission idempotency remains fail-closed, so Redis must be running before users submit or update answers.
+
 ## Daily Question worker API
 
 The separate worker solution lives beside this repository in `../Intertwine.Worker/Intertwine.Worker.slnx`. It references the shared projects in this repository. `DailyQuestionService` owns assignment selection, and `DailyQuestionRepository` owns database reads and inserts; their interfaces, unit tests, and EF migrations remain here.

@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -65,11 +65,11 @@ public class QuestionRepository : IQuestionRepository
         DateOnly localDate,
         CancellationToken cancellationToken = default)
     {
-        return await _context.DailyQuestions
+        return await _context.Questions
             .AsNoTracking()
-            .Where(dq => dq.Date == localDate)
-            .Select(dq => dq.Question)
-            .Where(q => q.IsActive)
+            .Where(q =>
+                q.IsActive &&
+                q.DailyQuestions.Any(dq => dq.Date == localDate))
             .Include(q => q.QuestionCategories)
                 .ThenInclude(qc => qc.Category)
             .Include(q => q.Answers)

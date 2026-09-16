@@ -3,7 +3,7 @@ import { reactive, ref } from 'vue'
 import AppIcon from '../components/AppIcon.vue'
 import { useIntertwine } from '../composables/useIntertwine'
 
-const { authenticate, reportError } = useIntertwine()
+const { authenticate, profile, reportError } = useIntertwine()
 const register = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -23,7 +23,9 @@ async function submit() {
   message.value = ''
   try {
     const loggedIn = await authenticate(form, register.value)
-    if (!loggedIn) {
+    if (loggedIn && !profile.value) {
+      location.hash = 'profile'
+    } else if (!loggedIn) {
       register.value = false
       form.password = ''
       message.value = 'Your account and profile are ready. Sign in to continue.'

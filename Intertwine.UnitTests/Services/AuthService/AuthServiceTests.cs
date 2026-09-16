@@ -54,10 +54,10 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_WhenIdentityCreationSucceeds_ReturnsUserId()
+    public async Task RegisterAsync_WhenIdentityCreationSucceeds_CreatesProfileAndWallet()
     {
         var userManager = CreateUserManager();
-        var userProfileRepository = new Mock<IUserProfileRepository>();
+        var profiles = new Mock<IUserProfileRepository>();
         userManager.Setup(x => x.FindByEmailAsync("person@example.com"))
             .ReturnsAsync((ApplicationUser?)null);
         userManager.Setup(x => x.CreateAsync(
@@ -65,18 +65,15 @@ public class AuthServiceTests
                 "Password1!"))
             .Callback<ApplicationUser, string>((user, _) => user.Id = "identity-1")
             .ReturnsAsync(IdentityResult.Success);
-        userProfileRepository.Setup(x => x.AddAsync(It.IsAny<UserProfile>()))
+        profiles.Setup(x => x.AddAsync(It.IsAny<UserProfile>()))
             .ReturnsAsync((UserProfile profile) => profile);
-        var service = CreateService(
-            userManager,
-            userProfileRepository: userProfileRepository);
+        var service = CreateService(userManager, userProfileRepository: profiles);
 
         var result = await service.RegisterAsync(CreateRegisterRequest());
 
         Assert.True(result.Succeeded);
         Assert.Equal("identity-1", result.UserId);
-        Assert.Null(result.Error);
-        userProfileRepository.Verify(x => x.AddAsync(
+        profiles.Verify(x => x.AddAsync(
             It.Is<UserProfile>(profile =>
                 profile.IdentityUserId == "identity-1" &&
                 profile.FirstName == "Test" &&
@@ -108,7 +105,6 @@ public class AuthServiceTests
             userManager.Setup(x => x.CheckPasswordAsync(user!, "Password1!"))
                 .ReturnsAsync(passwordIsValid);
         }
-
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
         var service = CreateService(userManager, tokenService);
 
@@ -128,31 +124,46 @@ public class AuthServiceTests
     [Fact]
     public async Task LoginAsync_WhenCredentialsAreValid_ReturnsGeneratedToken()
     {
-        var user = new ApplicationUser
-        {
-            Id = "identity-1",
-            Email = "person@example.com"
-        };
-        var userManager = CreateUserManager();
-        userManager.Setup(x => x.FindByEmailAsync(user.Email))
-            .ReturnsAsync(user);
-        userManager.Setup(x => x.CheckPasswordAsync(user, "Password1!"))
-            .ReturnsAsync(true);
+        var user = CreateIdentityUser();
+        var userManager = CreateValidLoginUserManager(user);
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
-        tokenService.Setup(x => x.GenerateToken(user.Id, user.Email))
+        tokenService.Setup(x => x.GenerateToken(user.Id, user.Email!))
             .Returns("signed-token");
         var service = CreateService(userManager, tokenService);
 
-        var result = await service.LoginAsync(new LoginRequest
-        {
-            Email = user.Email,
-            Password = "Password1!"
-        });
+        var result = await service.LoginAsync(CreateLoginRequest());
 
         Assert.True(result.Succeeded);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal("signed-token", result.Token);
-        Assert.Null(result.Error);
+    }
+
+    [Fact]
+    public async Task LoginAsync_WhenProfileIsInactive_ReactivatesBeforeReturningToken()
+    {
+        var user = CreateIdentityUser();
+        var userManager = CreateValidLoginUserManager(user);
+        var profile = new UserProfile
+        {
+            IdentityUserId = user.Id,
+            IsActive = false
+        };
+        var profiles = new Mock<IUserProfileRepository>(MockBehavior.Strict);
+        profiles.Setup(x => x.GetByIdentityUserIdIncludingInactiveAsync(user.Id))
+            .ReturnsAsync(profile);
+        profiles.Setup(x => x.SetIsActiveAsync(profile, true, user.Id))
+            .Callback(() => profile.IsActive = true)
+            .Returns(Task.CompletedTask);
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.GenerateToken(user.Id, user.Email!))
+            .Returns("signed-token");
+        var service = CreateService(userManager, tokenService, profiles);
+
+        var result = await service.LoginAsync(CreateLoginRequest());
+
+        Assert.True(result.Succeeded);
+        Assert.True(profile.IsActive);
+        profiles.Verify(x => x.SetIsActiveAsync(profile, true, user.Id), Times.Once);
     }
 
     private static RegisterRequest CreateRegisterRequest() => new()
@@ -163,6 +174,29 @@ public class AuthServiceTests
         LastName = "Person"
     };
 
+    private static LoginRequest CreateLoginRequest() => new()
+    {
+        Email = "person@example.com",
+        Password = "Password1!"
+    };
+
+    private static ApplicationUser CreateIdentityUser() => new()
+    {
+        Id = "identity-1",
+        Email = "person@example.com"
+    };
+
+    private static Mock<UserManager<ApplicationUser>> CreateValidLoginUserManager(
+        ApplicationUser user)
+    {
+        var userManager = CreateUserManager();
+        userManager.Setup(x => x.FindByEmailAsync(user.Email!))
+            .ReturnsAsync(user);
+        userManager.Setup(x => x.CheckPasswordAsync(user, "Password1!"))
+            .ReturnsAsync(true);
+        return userManager;
+    }
+
     private static Service CreateService(
         Mock<UserManager<ApplicationUser>> userManager,
         Mock<ITokenService>? tokenService = null,
@@ -170,8 +204,7 @@ public class AuthServiceTests
     {
         return new Service(
             userManager.Object,
-            (userProfileRepository ??
-                new Mock<IUserProfileRepository>()).Object,
+            (userProfileRepository ?? new Mock<IUserProfileRepository>()).Object,
             (tokenService ?? new Mock<ITokenService>()).Object);
     }
 

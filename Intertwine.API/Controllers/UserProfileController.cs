@@ -1,4 +1,4 @@
-﻿using Intertwine.Services.DTOs.UserProfiles;
+using Intertwine.Services.DTOs.UserProfiles;
 using Intertwine.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -22,9 +22,36 @@ public class UserProfileController : ControllerBase
         _userProfileService = userProfileService;
     }
 
+    [HttpPost("me")]
+    /// <summary>
+    /// Creates a profile for an authenticated account that does not have one yet.
+    /// </summary>
+    public async Task<IActionResult> CreateMe(
+        CreateUserProfileRequest request)
+    {
+        var identityUserId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(identityUserId))
+            return Unauthorized();
+
+        var profile = await _userProfileService
+            .CreateCurrentUserAsync(identityUserId, request);
+
+        if (profile is null)
+        {
+            return Conflict(new
+            {
+                message = "A profile already exists for this account."
+            });
+        }
+
+        return CreatedAtAction(nameof(GetMe), profile);
+    }
+
     [HttpGet("me")]
     /// <summary>
-    /// Retrieves the authenticated user's profile.
+    /// Retrieves the authenticated user's active profile.
     /// </summary>
     public async Task<IActionResult> GetMe()
     {
@@ -45,7 +72,7 @@ public class UserProfileController : ControllerBase
 
     [HttpPut("me")]
     /// <summary>
-    /// Updates the authenticated user's profile.
+    /// Updates the authenticated user's active profile.
     /// </summary>
     public async Task<IActionResult> UpdateMe(
         UpdateUserProfileRequest request)
@@ -67,11 +94,11 @@ public class UserProfileController : ControllerBase
         return Ok(profile);
     }
 
-    [HttpDelete("me")]
+    [HttpPost("me/deactivate")]
     /// <summary>
-    /// Deletes the authenticated user's profile.
+    /// Deactivates the authenticated user's profile without deleting its data.
     /// </summary>
-    public async Task<IActionResult> DeleteMe()
+    public async Task<IActionResult> DeactivateMe()
     {
         var identityUserId =
             User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -79,10 +106,10 @@ public class UserProfileController : ControllerBase
         if (string.IsNullOrEmpty(identityUserId))
             return Unauthorized();
 
-        var deleted = await _userProfileService
-            .DeleteCurrentUserAsync(identityUserId);
+        var deactivated = await _userProfileService
+            .DeactivateCurrentUserAsync(identityUserId);
 
-        if (!deleted)
+        if (!deactivated)
             return NotFound();
 
         return NoContent();

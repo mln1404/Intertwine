@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 
 namespace Intertwine.Services.Interfaces.Repositories;
 
@@ -8,11 +8,17 @@ public interface IUserProfileRepository
 
     Task<UserProfile?> GetByIdentityUserIdAsync(string identityUserId);
 
+    Task<UserProfile?> GetByIdentityUserIdIncludingInactiveAsync(
+        string identityUserId);
+
     Task<IEnumerable<UserProfile>> GetAllAsync();
 
     Task<UserProfile> AddAsync(UserProfile userProfile);
 
     Task UpdateAsync(UserProfile userProfile);
 
-    Task DeleteAsync(UserProfile userProfile);
+    Task SetIsActiveAsync(
+        UserProfile userProfile,
+        bool isActive,
+        string changedBy);
 }

@@ -3,8 +3,10 @@
 ## Implemented flows
 
 - Edit avatar name, first name, middle name and last name through `PUT /api/UserProfile/me`.
+- Deactivate a profile through `POST /api/UserProfile/me/deactivate`. Profile data is retained, and the next successful login reactivates it.
 - Question cards, daily questions, dialogs and profile answers show category dots and names using the category colors returned by the API.
-- `GET /api/user-answers/me` returns current selections with question text, answer text and categories. The profile shows these after sign-in and refresh.
+- `GET /api/user-answers/me` returns current selections with question text, answer text and categories. The dedicated My Answers section displays them without loading the question library or Daily Question.
+- Data-bound sections use a shared loading state and do not render editable controls, balances, packages, payments, or answer cards before their initial requests settle.
 - Two non-daily answers/updates are free per local date. Subsequent actions cost 10 Sparks each. The UI requires a checked spending consent box; the API requires `spendSparks: true` in the existing answer request. Same-answer resubmissions are rejected. The Daily Question remains once per date.
 - The server stages the answer, activity, wallet debit and signed `CreditSpend` ledger entry in one EF SaveChanges transaction. Wallet row versions and activity/answer concurrency tokens reject overlapping writes. The migration only updates EF metadata; its SQL Up/Down operations are empty.
 - Get Sparky (`#wallet`) loads currencies and packages from the API and adds a chosen package through the simulated top-up endpoint. No real payment is taken, and backend purchases persist.

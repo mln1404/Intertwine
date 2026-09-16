@@ -1,25 +1,27 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onBeforeMount, reactive, ref, watch } from 'vue'
 import { useIntertwine } from '../composables/useIntertwine'
 import AppIcon from '../components/AppIcon.vue'
 import AppModal from '../components/AppModal.vue'
-import CategoryTags from '../components/CategoryTags.vue'
+import LoadingState from '../components/LoadingState.vue'
 const {
   profile,
+  profileLoading,
+  profileLoaded,
+  profileError,
   canUseAccount,
   authOpen,
+  createProfile,
   saveProfile,
-  deleteProfile,
+  deactivateProfile,
   reportError,
-  currentAnswers,
-  balance,
+  loadProfile,
 } = useIntertwine()
 const form = reactive({ firstName: '', middleName: '', lastName: '', avatarName: '' })
 const busy = ref(false)
 const error = ref('')
 const message = ref('')
-const deleting = ref(false)
-const confirmation = ref('')
+const deactivating = ref(false)
 watch(
   profile,
   (value) =>
@@ -32,12 +34,15 @@ watch(
   { immediate: true },
 )
 const dirty = computed(() =>
-  Object.entries(form).some(([key, value]) => value !== profile.value?.[key as keyof typeof form]),
+  profile.value
+    ? Object.entries(form).some(
+        ([key, value]) => value !== profile.value?.[key as keyof typeof form],
+      )
+    : Boolean(form.firstName && form.lastName && form.avatarName),
 )
 
-function beginDelete() {
-  deleting.value = true
-  confirmation.value = ''
+function beginDeactivate() {
+  deactivating.value = true
 }
 
 async function save() {
@@ -45,29 +50,30 @@ async function save() {
   error.value = ''
   message.value = ''
   try {
-    await saveProfile({ ...form })
-    message.value = 'Your profile has been updated.'
+    const creating = !profile.value
+    if (creating) await createProfile({ ...form })
+    else await saveProfile({ ...form })
+    message.value = creating ? 'Your profile is ready.' : 'Your profile has been updated.'
   } catch (cause) {
     error.value = reportError(cause)
   } finally {
     busy.value = false
   }
 }
-async function remove() {
-  if (confirmation.value !== 'DELETE') return
+async function deactivate() {
   busy.value = true
   error.value = ''
   try {
-    await deleteProfile()
-    deleting.value = false
-    message.value = 'Profile deleted.'
+    await deactivateProfile()
+    deactivating.value = false
   } catch (cause) {
     error.value = reportError(cause)
-    deleting.value = false
+    deactivating.value = false
   } finally {
     busy.value = false
   }
 }
+onBeforeMount(() => void loadProfile())
 </script>
 <template>
   <header class="page-heading">
@@ -86,17 +92,20 @@ async function remove() {
     <p>Sign in to view and update your profile.</p>
     <button class="button primary" @click="authOpen = true">Sign in</button>
   </div>
-  <div v-else-if="!profile" class="empty-state panel">
+  <LoadingState
+    v-else-if="profileLoading || !profileLoaded"
+    message="Loading your profile…"
+    panel
+  />
+  <div v-else-if="profileError" class="empty-state panel">
     <AppIcon name="user" :size="36" />
-    <h2>Your profile isn’t available yet.</h2>
-    <p>
-      We couldn’t find profile information for this account. Sign out and contact the Intertwine
-      team if the problem continues.
-    </p>
+    <h2>We couldn’t load your profile.</h2>
+    <p>{{ profileError }}</p>
+    <button class="button secondary" @click="loadProfile(true)">Try again</button>
   </div>
   <div v-else class="profile-layout">
     <section class="panel profile-form">
-      <div class="profile-summary">
+      <div v-if="profile" class="profile-summary">
         <span class="avatar large">
           {{ form.firstName.slice(0, 1) }}{{ form.lastName.slice(0, 1) }}
         </span>
@@ -107,6 +116,15 @@ async function remove() {
           </p>
         </div>
       </div>
+      <div v-else class="profile-introduction">
+        <p class="eyebrow">ONE LAST STEP</p>
+        <h2>Create your profile</h2>
+        <p class="muted">
+          This account was created before profiles were added. Tell us what you would like people to
+          call you.
+        </p>
+      </div>
+      <h2 v-if="profile" class="form-title">Edit profile</h2>
       <form class="stack-form" @submit.prevent="save">
         <div class="form-row">
           <label>
@@ -142,7 +160,7 @@ async function remove() {
         <p v-if="message" class="inline-message success" role="status">{{ message }}</p>
         <div class="form-actions">
           <button class="button primary" :disabled="busy || !dirty">
-            {{ busy ? 'Saving…' : 'Save changes' }}
+            {{ busy ? 'Saving…' : profile ? 'Save changes' : 'Create profile' }}
             <AppIcon name="check" :size="17" />
           </button>
         </div>
@@ -160,55 +178,40 @@ async function remove() {
         extra action costs 10 Sparks ✨.
       </p>
     </aside>
-    <section class="answered-section panel">
-      <div class="section-heading">
-        <h2>
-          Your answers
-          <span class="muted">({{ currentAnswers.length }})</span>
-        </h2>
-        <a class="spark-balance" href="#payments">
-          Spark balance · {{ (balance ?? 0).toLocaleString() }} ✨
-        </a>
-      </div>
-      <p v-if="!currentAnswers.length" class="muted">
-        User has no Answered Questions yet.
-        <a href="#questions">Explore questions →</a>
-      </p>
-      <div v-else class="question-grid">
-        <article v-for="answer in currentAnswers" :key="answer.questionId" class="answered-card">
-          <CategoryTags :categories="answer.categories" />
-          <h3>{{ answer.questionTitle }}</h3>
-          <p>{{ answer.fullQuestion }}</p>
-          <p class="saved-answer">
-            <strong>Your answer:</strong>
-            {{ answer.answerText }}
-          </p>
-        </article>
-      </div>
-    </section>
-    <section class="danger-zone">
+    <section v-if="profile" class="danger-zone">
       <div>
-        <h3>Delete profile</h3>
+        <h3>Deactivate profile</h3>
         <p class="small muted">
-          Remove your Intertwine profile. This does not delete your sign-in account.
+          Step away without losing your information. Signing in again will reactivate your profile.
         </p>
       </div>
-      <button class="button danger" :disabled="busy" @click="beginDelete">Delete profile</button>
+      <button class="button secondary" :disabled="busy" @click="beginDeactivate">Deactivate</button>
     </section>
   </div>
-  <AppModal v-if="deleting" title="Delete your profile?" :busy="busy" @close="deleting = false">
+  <AppModal
+    v-if="deactivating"
+    title="Deactivate your profile?"
+    :busy="busy"
+    @close="deactivating = false"
+  >
     <p class="muted">
-      This removes your profile. You may lose access to questions and your wallet until a profile is
-      restored. Your sign-in account remains.
+      Your questions, answers, Sparks, and payment history will be kept. You will be signed out now,
+      and signing in again will reactivate your profile automatically.
     </p>
-    <form class="stack-form" @submit.prevent="remove">
-      <label>
-        Type DELETE to confirm
-        <input v-model="confirmation" autocomplete="off" required pattern="DELETE" />
-      </label>
-      <button class="button danger full" :disabled="confirmation !== 'DELETE' || busy">
-        {{ busy ? 'Deleting…' : 'Delete my profile' }}
-      </button>
+    <form class="stack-form" @submit.prevent="deactivate">
+      <div class="form-actions">
+        <button
+          type="button"
+          class="button secondary"
+          :disabled="busy"
+          @click="deactivating = false"
+        >
+          Keep profile active
+        </button>
+        <button class="button danger" :disabled="busy">
+          {{ busy ? 'Deactivating…' : 'Yes, deactivate' }}
+        </button>
+      </div>
     </form>
   </AppModal>
 </template>

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeMount, onUnmounted, ref } from 'vue'
 import { useIntertwine } from '../composables/useIntertwine'
 import type { Question, QuestionSummary } from '../models/question'
 import AppIcon from '../components/AppIcon.vue'
 import AppModal from '../components/AppModal.vue'
 import AnswerForm from '../components/AnswerForm.vue'
 import CategoryTags from '../components/CategoryTags.vue'
+import LoadingState from '../components/LoadingState.vue'
 const props = defineProps<{ library?: boolean }>()
 const {
   daily,
@@ -17,6 +18,7 @@ const {
   canUseAccount,
   authOpen,
   displayName,
+  refresh,
   detail,
   reportError,
 } = useIntertwine()
@@ -28,6 +30,7 @@ const detailError = ref('')
 const openedId = ref<number | null>(null)
 const openedDate = ref('')
 let detailVersion = 0
+const pageRequests = new AbortController()
 const categories = computed(() => [
   ...new Map(questions.value.flatMap((q) => q.categories).map((c) => [c.categoryId, c])).values(),
 ])
@@ -73,6 +76,8 @@ function clearFilters() {
   search.value = ''
   category.value = 0
 }
+onBeforeMount(() => void refresh(pageRequests.signal))
+onUnmounted(() => pageRequests.abort())
 </script>
 <template>
   <header class="page-heading">
@@ -92,10 +97,7 @@ function clearFilters() {
     </span>
   </header>
 
-  <div v-if="loading" class="loading-block" role="status">
-    <span class="spinner"></span>
-    Finding a little inspiration…
-  </div>
+  <LoadingState v-if="loading" message="Finding a little inspiration…" panel />
   <template v-else-if="!library">
     <div class="daily-layout">
       <section class="daily-card">
@@ -310,7 +312,7 @@ function clearFilters() {
     </div>
   </section>
   <AppModal v-if="openedId !== null" title="A little moment of reflection" @close="closeQuestion">
-    <p v-if="detailLoading" class="loading-block" role="status">Loading your question…</p>
+    <LoadingState v-if="detailLoading" message="Loading your question…" />
     <div v-else-if="detailError">
       <p class="inline-message error" role="alert">{{ detailError }}</p>
       <button

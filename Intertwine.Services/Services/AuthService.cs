@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Identity;
 using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.Authentication;
@@ -112,6 +112,16 @@ public class AuthService : IAuthService
                 Succeeded = false,
                 Error = AuthMessages.InvalidCredentials
             };
+        }
+
+        var userProfile = await _userProfileRepository
+            .GetByIdentityUserIdIncludingInactiveAsync(user.Id);
+        if (userProfile is { IsActive: false })
+        {
+            await _userProfileRepository.SetIsActiveAsync(
+                userProfile,
+                true,
+                user.Id);
         }
 
         var token = _tokenService.GenerateToken(user.Id, user.Email!);

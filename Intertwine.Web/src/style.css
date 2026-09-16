@@ -1081,6 +1081,11 @@ main:focus {
   border-top-color: #6c8759;
   animation: spin 1s linear infinite;
 }
+.compact-spinner {
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -1198,6 +1203,17 @@ main:focus {
 }
 .profile-summary .pill {
   margin-left: auto;
+}
+.profile-introduction {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 25px;
+}
+.profile-introduction h2 {
+  margin: 5px 0 8px;
+}
+.form-title {
+  margin-top: 25px;
+  font-size: 19px;
 }
 .profile-note {
   background: #eeeee3;

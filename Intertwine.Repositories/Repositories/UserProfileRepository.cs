@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +19,7 @@ public class UserProfileRepository : IUserProfileRepository
 
     public async Task<UserProfile?> GetByIdAsync(int userProfileId)
     {
-        return await _context.UserProfiles
+        return await ActiveProfiles()
             .AsNoTracking()
             .Include(x => x.UserAnswers)
             .Include(x => x.UserWallet)
@@ -29,8 +29,16 @@ public class UserProfileRepository : IUserProfileRepository
     public async Task<UserProfile?> GetByIdentityUserIdAsync(
         string identityUserId)
     {
+        return await ActiveProfiles()
+            .Include(x => x.UserWallet)
+            .FirstOrDefaultAsync(
+                x => x.IdentityUserId == identityUserId);
+    }
+
+    public async Task<UserProfile?> GetByIdentityUserIdIncludingInactiveAsync(
+        string identityUserId)
+    {
         return await _context.UserProfiles
-            .Include(x => x.UserAnswers)
             .Include(x => x.UserWallet)
             .FirstOrDefaultAsync(
                 x => x.IdentityUserId == identityUserId);
@@ -38,7 +46,7 @@ public class UserProfileRepository : IUserProfileRepository
 
     public async Task<IEnumerable<UserProfile>> GetAllAsync()
     {
-        return await _context.UserProfiles
+        return await ActiveProfiles()
             .AsNoTracking()
             .Include(x => x.UserAnswers)
             .Include(x => x.UserWallet)
@@ -59,9 +67,17 @@ public class UserProfileRepository : IUserProfileRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(UserProfile userProfile)
+    public async Task SetIsActiveAsync(
+        UserProfile userProfile,
+        bool isActive,
+        string changedBy)
     {
-        _context.UserProfiles.Remove(userProfile);
+        userProfile.IsActive = isActive;
+        userProfile.DateUpdated = DateTime.UtcNow;
+        userProfile.UpdatedBy = changedBy;
         await _context.SaveChangesAsync();
     }
+
+    private IQueryable<UserProfile> ActiveProfiles() =>
+        _context.UserProfiles.Where(x => x.IsActive);
 }

@@ -83,31 +83,36 @@ public class UserProfileServiceTests
     }
 
     [Fact]
-    public async Task DeleteCurrentUserAsync_WhenProfileExists_DeletesAndReturnsTrue()
+    public async Task DeactivateCurrentUserAsync_WhenProfileExists_SetsProfileInactive()
     {
         var profile = CreateProfile();
         var repository = CreateRepositoryReturning(profile);
-        repository.Setup(x => x.DeleteAsync(profile))
+        repository.Setup(x => x.SetIsActiveAsync(profile, false, profile.IdentityUserId))
             .Returns(Task.CompletedTask);
         var service = new Service(repository.Object);
 
-        var result = await service.DeleteCurrentUserAsync(profile.IdentityUserId);
+        var result = await service.DeactivateCurrentUserAsync(profile.IdentityUserId);
 
         Assert.True(result);
-        repository.Verify(x => x.DeleteAsync(profile), Times.Once);
+        repository.Verify(
+            x => x.SetIsActiveAsync(profile, false, profile.IdentityUserId),
+            Times.Once);
     }
 
     [Fact]
-    public async Task DeleteCurrentUserAsync_WhenProfileDoesNotExist_ReturnsFalseWithoutDelete()
+    public async Task DeactivateCurrentUserAsync_WhenProfileDoesNotExist_ReturnsFalse()
     {
         var repository = CreateRepositoryReturning(null);
         var service = new Service(repository.Object);
 
-        var result = await service.DeleteCurrentUserAsync("missing-user");
+        var result = await service.DeactivateCurrentUserAsync("missing-user");
 
         Assert.False(result);
         repository.Verify(
-            x => x.DeleteAsync(It.IsAny<UserProfile>()),
+            x => x.SetIsActiveAsync(
+                It.IsAny<UserProfile>(),
+                It.IsAny<bool>(),
+                It.IsAny<string>()),
             Times.Never);
     }
 
@@ -128,6 +133,7 @@ public class UserProfileServiceTests
         FirstName = "First",
         MiddleName = "Middle",
         LastName = "Last",
+        IsActive = true,
         UserWallet = new UserWallet
         {
             CreditBalance = 125

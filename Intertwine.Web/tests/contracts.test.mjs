@@ -127,7 +127,7 @@ test('answer request puts the date in the query and key in its header', () => {
     },
   })
 })
-test('registration provisions a profile; login restores profile, answers, and daily activity', async () => {
+test('login loads only the profile before the question screen requests question data', async () => {
   handler = () => json({ succeeded: true, userId: 'test-user', token: null })
   assert.equal(await app.authenticate(credentials, true), false)
   assert.equal(sessionStorage.getItem('intertwine.token'), null)
@@ -136,6 +136,17 @@ test('registration provisions a profile; login restores profile, answers, and da
   assert.equal(app.profile.value.firstName, 'Test')
   assert.equal(app.profile.value.creditBalance, 45)
   assert.equal(app.balance.value, 45)
+  assert.equal(
+    calls.some((call) => call.path === '/api/questions'),
+    false,
+  )
+  assert.equal(
+    calls.some((call) => call.path.startsWith('/api/questions/daily')),
+    false,
+  )
+
+  await app.refresh()
+
   assert.equal(app.questions.value[0].answers, undefined)
   assert.equal(app.activity.value.answers[8], 80)
   assert.equal(app.activity.value.daily, false)
@@ -144,6 +155,75 @@ test('registration provisions a profile; login restores profile, answers, and da
   assert.equal(
     calls.find((call) => call.path === '/api/questions').headers.get('Authorization'),
     'Bearer test-token',
+  )
+})
+test('legacy account can create its missing profile without loading profile-dependent data first', async () => {
+  await app.signOut()
+  calls.length = 0
+  let hasProfile = false
+  handler = (call) => {
+    if (call.path === '/api/Auth/login')
+      return json({ succeeded: true, token: 'legacy-token', userId: 'legacy-user' })
+    if (call.path.startsWith('/api/questions/daily')) return json(question)
+    if (call.path === '/api/questions') return json([{ ...question, answers: undefined }])
+    if (call.path === '/api/UserProfile/me' && call.method === 'POST') {
+      hasProfile = true
+      assert.equal(JSON.parse(call.body).avatarName, 'legacy')
+      return json({ ...profile, identityUserId: 'legacy-user', avatarName: 'legacy' }, 201)
+    }
+    if (call.path === '/api/UserProfile/me')
+      return hasProfile
+        ? json({ ...profile, identityUserId: 'legacy-user', avatarName: 'legacy' })
+        : json({}, 404)
+    if (call.path === '/api/user-answers/me') return json([])
+    if (call.path.startsWith('/api/daily-activity/me'))
+      return json({
+        localDate: localDate(),
+        dailyQuestionCreateOrUpdateUsed: false,
+        nonDailyQuestionsAnswered: 0,
+        nonDailyQuestionsRemaining: 2,
+      })
+    throw new Error(`Unexpected request: ${call.method || 'GET'} ${call.path}`)
+  }
+
+  assert.equal(await app.authenticate(credentials, false), true)
+  assert.equal(app.profile.value, null)
+  assert.equal(app.error.value, '')
+  assert.equal(
+    calls.some((call) => call.path === '/api/user-answers/me'),
+    false,
+  )
+  assert.equal(
+    calls.some((call) => call.path.startsWith('/api/daily-activity/me')),
+    false,
+  )
+
+  await app.createProfile({
+    firstName: 'Legacy',
+    lastName: 'Person',
+    middleName: '',
+    avatarName: 'legacy',
+  })
+
+  assert.equal(app.profile.value.avatarName, 'legacy')
+  assert.equal(
+    calls.some((call) => call.path === '/api/user-answers/me'),
+    false,
+  )
+
+  await app.loadCurrentAnswers()
+
+  assert.equal(
+    calls.some((call) => call.path === '/api/user-answers/me'),
+    false,
+  )
+  assert.equal(
+    calls.some((call) => call.path === '/api/questions'),
+    false,
+  )
+  assert.equal(
+    calls.some((call) => call.path.startsWith('/api/questions/daily')),
+    false,
   )
 })
 test('question answers are fetched from the detail endpoint', async () => {
@@ -204,6 +284,10 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
       assert.equal(call.method, 'PUT')
       return json({ ...profile, ...JSON.parse(call.body) })
     }
+    if (call.path === '/api/UserProfile/me/deactivate') {
+      assert.equal(call.method, 'POST')
+      return new Response(null, { status: 204 })
+    }
     if (call.path === '/api/wallet/payments?page=1')
       return json([
         {
@@ -231,6 +315,9 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
   })
   assert.equal(app.profile.value.firstName, 'Updated')
   assert.equal((await app.loadPayments())[0].sparksPurchased, 120)
+  await app.deactivateProfile()
+  assert.equal(sessionStorage.getItem('intertwine.token'), null)
+  assert.equal(app.signedIn.value, false)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)

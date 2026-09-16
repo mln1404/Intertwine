@@ -6,15 +6,30 @@ import QuestionsView from './views/QuestionsView.vue'
 import WalletView from './views/WalletView.vue'
 import ProfileView from './views/ProfileView.vue'
 import PaymentsView from './views/PaymentsView.vue'
+import UserAnswersView from './views/UserAnswersView.vue'
 import { useIntertwine } from './composables/useIntertwine'
 import { localDate } from './utils/answerRequest'
-const { signedIn, profile, error, loading, today, activity, balance, refresh, signOut } =
-  useIntertwine()
+const {
+  signedIn,
+  profile,
+  profileLoading,
+  profileLoaded,
+  error,
+  loading,
+  today,
+  activity,
+  balance,
+  refresh,
+  loadProfile,
+  loadCurrentAnswers,
+  signOut,
+} = useIntertwine()
 const navigation = [
   { id: 'today', label: 'For you', icon: 'sun' },
   { id: 'questions', label: 'Explore questions', icon: 'grid' },
   { id: 'wallet', label: 'Get Sparky', icon: 'wallet' },
   { id: 'payments', label: 'Payment history', icon: 'wallet' },
+  { id: 'answers', label: 'My answers', icon: 'book' },
   { id: 'profile', label: 'My profile', icon: 'user' },
 ]
 const route = ref('today')
@@ -26,6 +41,7 @@ const initials = computed(() =>
 function syncRoute() {
   const hash = location.hash.slice(1)
   route.value = navigation.some((item) => item.id === hash) ? hash : 'today'
+  error.value = ''
   document.title = signedIn.value
     ? `${navigation.find((item) => item.id === route.value)?.label} · Intertwine`
     : 'Welcome · Intertwine'
@@ -34,8 +50,14 @@ function syncRoute() {
 function checkDate() {
   if (today.value !== localDate()) {
     activity.value = { daily: false, count: 0, remaining: 2, answers: {} }
-    void refresh()
+    today.value = localDate()
+    if (route.value === 'today' || route.value === 'questions') void refresh()
   }
+}
+function retry() {
+  if (route.value === 'today' || route.value === 'questions') void refresh()
+  else if (route.value === 'answers') void loadCurrentAnswers(undefined, true)
+  else void loadProfile(true)
 }
 let timer: ReturnType<typeof setInterval>
 watch(signedIn, syncRoute)
@@ -44,7 +66,7 @@ onMounted(() => {
   window.addEventListener('hashchange', syncRoute)
   window.addEventListener('focus', checkDate)
   timer = setInterval(checkDate, 30000)
-  void refresh()
+  if (signedIn.value) void loadProfile()
 })
 onUnmounted(() => {
   window.removeEventListener('hashchange', syncRoute)
@@ -113,8 +135,10 @@ onUnmounted(() => {
             <span>Take your time. You belong here.</span>
           </div>
           <a class="sidebar-profile" href="#profile">
-            <span class="avatar">{{ initials }}</span>
-            <span>
+            <span v-if="profileLoading || !profileLoaded" class="spinner compact-spinner"></span>
+            <span v-else class="avatar">{{ initials }}</span>
+            <span v-if="profileLoading || !profileLoaded">Loading profile…</span>
+            <span v-else>
               <strong>{{ profile?.firstName || 'Your profile' }} {{ profile?.lastName }}</strong>
               <small>Your personal space</small>
             </span>
@@ -130,7 +154,9 @@ onUnmounted(() => {
             <strong>{{ navigation.find((item) => item.id === route)?.label }}</strong>
           </span>
           <div class="topbar-actions">
+            <span v-if="profileLoading || !profileLoaded" class="spinner compact-spinner"></span>
             <a
+              v-else
               class="spark-balance"
               href="#payments"
               aria-label="Spark balance and payment history"
@@ -144,7 +170,8 @@ onUnmounted(() => {
             <button class="icon-button" aria-label="Sign out" :disabled="loading" @click="signOut">
               <AppIcon name="logout" :size="19" />
             </button>
-            <a href="#profile" class="avatar small-avatar" aria-label="Your profile">
+            <span v-if="profileLoading || !profileLoaded" class="spinner compact-spinner"></span>
+            <a v-else href="#profile" class="avatar small-avatar" aria-label="Your profile">
               {{ initials }}
             </a>
           </div>
@@ -152,7 +179,7 @@ onUnmounted(() => {
         <main id="main-content" ref="main" tabindex="-1">
           <div v-if="error" class="inline-message error global-error" role="alert">
             <span>{{ error }}</span>
-            <button class="button secondary" :disabled="loading" @click="refresh">
+            <button class="button secondary" :disabled="loading" @click="retry">
               {{ loading ? 'Trying…' : 'Try again' }}
             </button>
           </div>
@@ -163,6 +190,7 @@ onUnmounted(() => {
           />
           <WalletView v-else-if="route === 'wallet'" :key="`wallet-${signedIn}`" />
           <PaymentsView v-else-if="route === 'payments'" :key="`payments-${signedIn}`" />
+          <UserAnswersView v-else-if="route === 'answers'" :key="`answers-${signedIn}`" />
           <ProfileView v-else :key="`profile-${signedIn}`" />
           <footer class="page-footer">
             <span>Thoughtfully connected. Unmistakably you.</span>

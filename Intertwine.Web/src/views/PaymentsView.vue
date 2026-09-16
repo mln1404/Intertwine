@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { onBeforeMount, ref } from 'vue'
 import { useIntertwine } from '../composables/useIntertwine'
 import type { PaymentHistory } from '../models/question'
+import LoadingState from '../components/LoadingState.vue'
 const { loadPayments, reportError, canUseAccount, authOpen } = useIntertwine()
 const payments = ref<PaymentHistory[]>([])
 const page = ref(1)
 const busy = ref(false)
+const initialized = ref(false)
 const error = ref('')
 async function load(nextPage = page.value) {
   if (!canUseAccount.value || busy.value) return
@@ -18,12 +20,13 @@ async function load(nextPage = page.value) {
     error.value = reportError(cause)
   } finally {
     busy.value = false
+    initialized.value = true
   }
 }
 function date(value: string) {
   return new Date(/[zZ]|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`).toLocaleString()
 }
-onMounted(() => load())
+onBeforeMount(() => void load())
 </script>
 <template>
   <header class="page-heading">
@@ -38,13 +41,13 @@ onMounted(() => load())
     <p>Sign in to see your payments.</p>
     <button class="button primary" @click="authOpen = true">Sign in</button>
   </div>
+  <LoadingState v-else-if="busy || !initialized" message="Loading payment history…" panel />
   <section v-else class="panel payment-history">
-    <p v-if="busy" role="status">Loading payments…</p>
     <div v-if="error" class="inline-message error" role="alert">
       {{ error }}
       <button class="text-button" @click="load()">Try again</button>
     </div>
-    <p v-if="!busy && !error && !payments.length" class="muted">No Payment History found</p>
+    <p v-if="!error && !payments.length" class="muted">No Payment History found</p>
     <article v-for="payment in payments" :key="payment.userPaymentId" class="payment-row">
       <div>
         <strong>+{{ payment.sparksPurchased.toLocaleString() }} ✨</strong>

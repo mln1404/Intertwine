@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Services.DTOs.UserProfiles;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
@@ -13,6 +13,38 @@ public class UserProfileService : IUserProfileService
         IUserProfileRepository userProfileRepository)
     {
         _userProfileRepository = userProfileRepository;
+    }
+
+    public async Task<UserProfileDto?> CreateCurrentUserAsync(
+        string identityUserId,
+        CreateUserProfileRequest request)
+    {
+        var existingProfile = await _userProfileRepository
+            .GetByIdentityUserIdIncludingInactiveAsync(identityUserId);
+
+        if (existingProfile is not null)
+            return null;
+
+        var userProfile = new UserProfile
+        {
+            IdentityUserId = identityUserId,
+            AvatarName = request.AvatarName,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            MiddleName = request.MiddleName,
+            DateCreated = DateTime.UtcNow,
+            CreatedBy = identityUserId,
+            UserWallet = new UserWallet
+            {
+                CreditBalance = 0,
+                DateCreated = DateTime.UtcNow,
+                CreatedBy = identityUserId
+            }
+        };
+
+        await _userProfileRepository.AddAsync(userProfile);
+
+        return MapToDto(userProfile);
     }
 
     public async Task<UserProfileDto?> GetCurrentUserProfileAsync(
@@ -47,7 +79,7 @@ public class UserProfileService : IUserProfileService
         return MapToDto(userProfile);
     }
 
-    public async Task<bool> DeleteCurrentUserAsync(
+    public async Task<bool> DeactivateCurrentUserAsync(
         string identityUserId)
     {
         var userProfile = await _userProfileRepository
@@ -56,7 +88,10 @@ public class UserProfileService : IUserProfileService
         if (userProfile is null)
             return false;
 
-        await _userProfileRepository.DeleteAsync(userProfile);
+        await _userProfileRepository.SetIsActiveAsync(
+            userProfile,
+            false,
+            identityUserId);
 
         return true;
     }

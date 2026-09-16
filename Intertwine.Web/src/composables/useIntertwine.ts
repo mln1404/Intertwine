@@ -24,6 +24,12 @@ import { localDate } from '../utils/answerRequest'
 
 const signedIn = ref(Boolean(sessionStorage.getItem('intertwine.token')))
 const profile = ref<Profile | null>(null)
+const profileLoading = ref(false)
+const profileLoaded = ref(false)
+const profileError = ref('')
+const currentAnswersLoading = ref(false)
+const currentAnswersLoaded = ref(false)
+const currentAnswersError = ref('')
 const daily = ref<Question | null>(null)
 const questions = ref<QuestionSummary[]>([])
 const balance = ref<number | null>(null)
@@ -46,6 +52,8 @@ const displayName = computed(
   () => profile.value?.firstName || (signedIn.value ? 'friend' : 'there'),
 )
 let generation = 0
+let questionGeneration = 0
+let profileRequest: Promise<Profile | null> | null = null
 const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
@@ -54,19 +62,86 @@ function reportError(cause: unknown) {
     sessionStorage.removeItem('intertwine.user')
     signedIn.value = false
     profile.value = null
+    profileLoaded.value = false
+    profileError.value = ''
     balance.value = null
     questions.value = []
     packages.value = []
     activity.value = emptyActivity()
     currentAnswers.value = []
+    currentAnswersLoading.value = false
+    currentAnswersLoaded.value = false
+    currentAnswersError.value = ''
     currencies.value = []
     authOpen.value = true
   }
   return cause instanceof Error ? cause.message : 'Something went wrong. Please try again.'
 }
 
-async function refresh() {
-  const version = ++generation
+async function loadProfile(force = false) {
+  if (!sessionStorage.getItem('intertwine.token')) {
+    profile.value = null
+    profileLoaded.value = true
+    profileError.value = ''
+    return null
+  }
+  if (!force && profileLoaded.value) return profile.value
+  if (profileRequest) return profileRequest
+
+  const version = generation
+  profileLoading.value = true
+  profileError.value = ''
+  let pending!: Promise<Profile | null>
+  pending = (async () => {
+    try {
+      const result = await request<Profile>('/api/UserProfile/me')
+      if (version !== generation) return null
+      profile.value = result
+      balance.value = result.creditBalance
+      profileLoaded.value = true
+      return result
+    } catch (cause) {
+      if (version !== generation) return null
+      profile.value = null
+      balance.value = null
+      profileLoaded.value = true
+      if (!(cause instanceof ApiError && cause.status === 404)) {
+        profileError.value = reportError(cause)
+        error.value = profileError.value
+      }
+      return null
+    } finally {
+      if (version === generation) profileLoading.value = false
+      if (profileRequest === pending) profileRequest = null
+    }
+  })()
+  profileRequest = pending
+  return pending
+}
+
+async function loadCurrentAnswers(signal?: AbortSignal, force = false) {
+  await loadProfile()
+  if (signal?.aborted || !profile.value) return
+  if (!force && currentAnswersLoaded.value) return
+
+  currentAnswersLoading.value = true
+  currentAnswersError.value = ''
+  try {
+    setCurrentAnswers(await getCurrentAnswers(signal))
+    currentAnswersLoaded.value = true
+  } catch (cause) {
+    if (!signal?.aborted) {
+      currentAnswersError.value = reportError(cause)
+      currentAnswersLoaded.value = true
+      error.value = currentAnswersError.value
+    }
+  } finally {
+    currentAnswersLoading.value = false
+  }
+}
+
+async function refresh(signal?: AbortSignal) {
+  const version = ++questionGeneration
   loading.value = true
   error.value = ''
   const date = localDate()
@@ -82,14 +157,27 @@ async function refresh() {
     loading.value = false
     return
   }
+
+  await loadProfile()
+  if (signal?.aborted || version !== questionGeneration) {
+    if (version === questionGeneration) loading.value = false
+    return
+  }
+  if (!profile.value) {
+    loading.value = false
+    return
+  }
+
   const results = await Promise.allSettled([
-    getDailyQuestion(today.value),
-    getQuestions(),
-    request<Profile>('/api/UserProfile/me'),
-    getCurrentAnswers(),
-    getDailyActivity(today.value),
+    getDailyQuestion(today.value, signal),
+    getQuestions(undefined, signal),
+    getCurrentAnswers(signal),
+    getDailyActivity(today.value, signal),
   ])
-  if (version !== generation) return
+  if (signal?.aborted || version !== questionGeneration) {
+    if (version === questionGeneration) loading.value = false
+    return
+  }
   const dailyResult = results[0]!
   if (dailyResult.status === 'fulfilled') daily.value = dailyResult.value as Question
   else if (!(dailyResult.reason instanceof ApiError && dailyResult.reason.status === 404)) {
@@ -99,24 +187,21 @@ async function refresh() {
   const listResult = results[1]
   if (listResult?.status === 'fulfilled') questions.value = listResult.value as QuestionSummary[]
   else if (listResult?.status === 'rejected') error.value = reportError(listResult.reason)
-  const profileResult = results[2]
-  if (profileResult?.status === 'fulfilled') {
-    profile.value = profileResult.value as Profile
-    balance.value = profile.value.creditBalance
-  } else if (profileResult?.status === 'rejected') {
-    if (profileResult.reason instanceof ApiError && profileResult.reason.status === 404)
-      profile.value = null
-    else error.value = reportError(profileResult.reason)
-  }
-  const answersResult = results[3]
+  const answersResult = results[2]
   if (answersResult?.status === 'fulfilled') {
     const currentAnswers = answersResult.value as CurrentAnswer[]
     activity.value.answers = Object.fromEntries(
       currentAnswers.map((answer) => [answer.questionId, answer.answerId]),
     )
     setCurrentAnswers(currentAnswers)
-  } else if (answersResult?.status === 'rejected') error.value = reportError(answersResult.reason)
-  const activityResult = results[4]
+    currentAnswersLoaded.value = true
+    currentAnswersError.value = ''
+  } else if (answersResult?.status === 'rejected') {
+    currentAnswersError.value = reportError(answersResult.reason)
+    currentAnswersLoaded.value = true
+    error.value = currentAnswersError.value
+  }
+  const activityResult = results[3]
   if (activityResult?.status === 'fulfilled') {
     const dailyActivity = activityResult.value as DailyActivity
     activity.value.daily = dailyActivity.dailyQuestionCreateOrUpdateUsed
@@ -188,14 +273,22 @@ async function authenticate(
   sessionStorage.setItem('intertwine.token', result.token)
   sessionStorage.setItem('intertwine.user', result.userId || '')
   resetState()
+  await loadProfile()
   signedIn.value = true
   authOpen.value = false
-  await refresh()
   return true
 }
 function resetState() {
   generation++
+  questionGeneration++
   profile.value = null
+  profileLoading.value = false
+  profileLoaded.value = false
+  profileError.value = ''
+  currentAnswersLoading.value = false
+  currentAnswersLoaded.value = false
+  currentAnswersError.value = ''
+  profileRequest = null
   daily.value = null
   questions.value = []
   packages.value = []
@@ -217,10 +310,24 @@ async function saveProfile(input: ProfileInput) {
     method: 'PUT',
     body: JSON.stringify(input),
   })
+  profileLoaded.value = true
+  profileError.value = ''
   balance.value = profile.value.creditBalance
 }
-async function deleteProfile() {
-  await request<void>('/api/UserProfile/me', { method: 'DELETE' })
+async function createProfile(input: ProfileInput) {
+  profile.value = await request<Profile>('/api/UserProfile/me', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+  profileLoaded.value = true
+  profileError.value = ''
+  balance.value = profile.value.creditBalance
+  currentAnswers.value = []
+  currentAnswersLoaded.value = true
+  currentAnswersError.value = ''
+}
+async function deactivateProfile() {
+  await request<void>('/api/UserProfile/me/deactivate', { method: 'POST' })
   await signOut()
 }
 async function loadWallet(currencyCode = '') {
@@ -260,6 +367,12 @@ export function useIntertwine() {
   return {
     signedIn,
     profile,
+    profileLoading,
+    profileLoaded,
+    profileError,
+    currentAnswersLoading,
+    currentAnswersLoaded,
+    currentAnswersError,
     daily,
     questions,
     balance,
@@ -275,12 +388,15 @@ export function useIntertwine() {
     canUseAccount,
     displayName,
     refresh,
+    loadProfile,
+    loadCurrentAnswers,
     detail,
     answer,
     authenticate,
     signOut,
+    createProfile,
     saveProfile,
-    deleteProfile,
+    deactivateProfile,
     loadWallet,
     topUp,
     reportError,

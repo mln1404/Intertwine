@@ -19,7 +19,7 @@ Open the URL printed by Vite. Signed-out visitors see the public Intertwine home
 Copy-Item .env.example .env.local
 ```
 
-Start the `Intertwine.API` project from the same solution with its SQL Server and Redis dependencies. The Vite development proxy forwards `/api` to `http://localhost:5288`; override `API_PROXY_TARGET` if needed. Keep `VITE_API_URL` empty when using this proxy. If ASP.NET redirects HTTP to HTTPS, use the HTTP launch profile or configure a trusted HTTPS target.
+Start the `Intertwine.API` project from the same solution with its SQL Server and Redis dependencies. The Vite development proxy forwards `/api` to `https://localhost:7279`, matching the API's default HTTPS launch profile; override `API_PROXY_TARGET` if needed. Keep `VITE_API_URL` empty when using this proxy. The proxy accepts the local ASP.NET Core development certificate without disabling HTTPS validation in the browser or API.
 
 The home-page sign-in form connects to the real API. Successful sign-in loads the authenticated user's data. Access tokens are held in `sessionStorage` for the current browser tab and removed on sign-out or an expired-session response.
 
@@ -29,11 +29,12 @@ The home-page sign-in form connects to the real API. Successful sign-in loads th
 - **Explore questions:** search, category filters derived from the question list, and question details loaded when opened.
 - **Get Sparky:** balance, API-provided currencies, available credit packages, and simulated one-click top-ups. Ambiguous failures prompt a balance check; purchases are never automatically retried.
 - **Payment history:** authenticated purchase history from the wallet API.
-- **My profile:** view and edit the supported name fields, with an explicit typed confirmation before deleting the profile.
+- **My answers:** the user's answered questions, selected answers, and color-coded categories.
+- **My profile:** view and edit the supported name fields, plus a confirmation modal for reversible profile deactivation.
 - **Accounts:** registration, sign-in, sign-out, validation messages, and expired-session handling.
 - Responsive desktop sidebar/mobile bottom navigation, labelled form inputs, native modal focus containment, keyboard navigation, loading/error/empty states, and reduced-motion support.
 
-Hash navigation (`#today`, `#questions`, `#wallet`, `#profile`) supports browser back/forward and static hosting without a route fallback.
+Hash navigation (`#today`, `#questions`, `#wallet`, `#payments`, `#answers`, `#profile`) supports browser back/forward and static hosting without a route fallback.
 
 ## API contracts and current backend limits
 
@@ -44,7 +45,8 @@ Hash navigation (`#today`, `#questions`, `#wallet`, `#profile`) supports browser
 | Question and answer options | `GET /api/questions/{id}`                              |
 | Answer submission           | `POST /api/questions/{id}/answer?localDate=YYYY-MM-DD` |
 | Authentication              | `POST /api/Auth/register`, `POST /api/Auth/login`      |
-| Profile                     | `GET`, `PUT`, `DELETE /api/UserProfile/me`             |
+| Profile                     | `GET`, `PUT`, `POST /api/UserProfile/me`                |
+| Deactivate profile          | `POST /api/UserProfile/me/deactivate`                   |
 | Current answers             | `GET /api/user-answers/me`                             |
 | Daily activity              | `GET /api/daily-activity/me?localDate=YYYY-MM-DD`      |
 | Wallet                      | `GET /api/wallet`                                      |
@@ -57,7 +59,7 @@ Answers send `{ answerId }` and an `Idempotency-Key` header. The key is reused f
 
 The server remains authoritative for the one Daily Question action and two non-daily actions per date. Both new and changed non-daily answers consume an action. On sign-in and refresh, the UI restores current selections and the supplied local date's activity from the API. No invented history, streaks, matches, or cross-device usage totals are displayed.
 
-Registration returns success without a token, so users sign in separately. The backend creates the Identity account, `UserProfile`, and zero-balance `UserWallet` during registration. Deleting a profile does not delete its Identity account.
+Registration returns success without a token, so users sign in separately. The backend creates the Identity account, `UserProfile`, and zero-balance `UserWallet` during registration. Deactivation sets `UserProfile.IsActive` to false without deleting profile data or the Identity account; the next successful login reactivates it.
 
 The existing wallet implementation records a completed `IntertwineDemo` payment; it does not charge a card. The wallet screen discloses this. A real checkout requires backend payment integration.
 
@@ -80,11 +82,11 @@ Production output is in `dist/`. The development proxy is not included in the pr
 ```text
 src/
   api/              Typed HTTP client and question endpoints
-  components/       Shared icons, dialogs, authentication, answer form
+  components/       Shared icons, dialogs, loading state, authentication, answer form
   composables/      Shared session, questions, profile, and wallet state
   models/           Types aligned with backend DTOs
   utils/            Local calendar date and answer-request construction
-  views/            Questions, wallet, and profile screens
+  views/            Questions, answers, wallet, payments, and profile screens
   App.vue           Navigation and application shell
   style.css         Responsive visual design
 tests/              Isolated API and state contract tests

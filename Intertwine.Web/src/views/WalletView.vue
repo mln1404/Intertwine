@@ -3,6 +3,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useIntertwine } from '../composables/useIntertwine'
 import type { CreditPackage } from '../models/question'
 import AppIcon from '../components/AppIcon.vue'
+import LoadingState from '../components/LoadingState.vue'
 const { balance, packages, currencies, canUseAccount, authOpen, loadWallet, topUp, reportError } =
   useIntertwine()
 const currency = ref('')
@@ -71,6 +72,11 @@ onMounted(async () => {
     <p>Sign in to view your Spark balance and available packages.</p>
     <button class="button primary" @click="authOpen = true">Sign in</button>
   </div>
+  <LoadingState
+    v-else-if="initializing || loading"
+    message="Loading your wallet and Spark packages…"
+    panel
+  />
   <template v-else>
     <section class="wallet-banner">
       <div>
@@ -113,8 +119,7 @@ onMounted(async () => {
           </select>
         </label>
       </div>
-      <div v-if="loading" class="loading-block" role="status">Loading your wallet…</div>
-      <div v-else-if="packages.length" class="question-grid">
+      <div v-if="packages.length" class="question-grid">
         <article
           v-for="(offer, index) in packages"
           :key="offer.creditPackageId"
