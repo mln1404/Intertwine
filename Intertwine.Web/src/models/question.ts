@@ -32,6 +32,12 @@ export interface CreditPackage {
   amount: number
   credits: number
 }
+export interface Currency {
+  code: string
+  symbol: string
+  name: string
+  decimalPlaces: number
+}
 export interface AuthResult {
   succeeded: boolean
   error: string | null

@@ -14,7 +14,6 @@ const {
   error,
   today,
   activity,
-  demo,
   canUseAccount,
   authOpen,
   displayName,
@@ -117,7 +116,7 @@ function clearFilters() {
         </template>
         <div v-else class="empty-state">
           <AppIcon name="sun" :size="38" />
-          <h2>{{ error ? 'A moment of disconnection.' : 'A new question is on its way.' }}</h2>
+          <h2>{{ error ? 'Unable to load the Daily Question' : 'No Daily Question' }}</h2>
           <p>
             {{
               error
@@ -188,13 +187,7 @@ function clearFilters() {
           <div class="progress-track">
             <span :style="{ width: `${Math.min(activity.count / 2, 1) * 100}%` }"></span>
           </div>
-          <p class="small muted">
-            {{
-              demo
-                ? 'Demo activity resets when you reload.'
-                : 'Synced with your account for this local date.'
-            }}
-          </p>
+          <p class="small muted">Synced with your account for this local date.</p>
         </section>
       </aside>
     </div>
@@ -233,13 +226,7 @@ function clearFilters() {
         </button>
       </div>
       <div v-else class="soft-panel">
-        <p>
-          {{
-            canUseAccount
-              ? 'More questions will appear here when they’re available.'
-              : 'Sign in to explore questions and start sharing your story.'
-          }}
-        </p>
+        <p>No Questions found</p>
         <button v-if="!canUseAccount" class="text-button" @click="authOpen = true">
           Sign in to explore →
         </button>
@@ -284,7 +271,8 @@ function clearFilters() {
     </div>
     <p class="library-note">
       <AppIcon name="leaf" :size="16" />
-      Two free answers or updates each day, plus the Daily Question. Extra library actions cost 10 ✨ each.
+      Two free answers or updates each day, plus the Daily Question. Extra library actions cost 10
+      ✨ each.
     </p>
     <div v-if="filtered.length" class="question-grid library-grid">
       <button
@@ -313,14 +301,8 @@ function clearFilters() {
     </div>
     <div v-else class="empty-state panel">
       <AppIcon name="search" :size="32" />
-      <h2>{{ canUseAccount ? 'Nothing here just yet.' : 'Your next discovery is waiting.' }}</h2>
-      <p>
-        {{
-          canUseAccount
-            ? 'Try another search or category. If the library is empty, check back soon.'
-            : 'Sign in to browse the question library.'
-        }}
-      </p>
+      <h2>{{ questions.length ? 'No Questions match your filters' : 'No Questions found' }}</h2>
+      <p v-if="questions.length">Try another search or category.</p>
       <button v-if="!canUseAccount" class="button primary" @click="authOpen = true">Sign in</button>
       <button v-else-if="search || category" class="button secondary" @click="clearFilters">
         Clear filters

@@ -44,7 +44,7 @@ onMounted(() => load())
       {{ error }}
       <button class="text-button" @click="load()">Try again</button>
     </div>
-    <p v-if="!busy && !error && !payments.length" class="muted">No payments on this page yet.</p>
+    <p v-if="!busy && !error && !payments.length" class="muted">No Payment History found</p>
     <article v-for="payment in payments" :key="payment.userPaymentId" class="payment-row">
       <div>
         <strong>+{{ payment.sparksPurchased.toLocaleString() }} ✨</strong>

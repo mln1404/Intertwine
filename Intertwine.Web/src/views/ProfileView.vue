@@ -6,7 +6,6 @@ import AppModal from '../components/AppModal.vue'
 import CategoryTags from '../components/CategoryTags.vue'
 const {
   profile,
-  demo,
   canUseAccount,
   authOpen,
   saveProfile,
@@ -47,7 +46,7 @@ async function save() {
   message.value = ''
   try {
     await saveProfile({ ...form })
-    message.value = demo.value ? 'Demo profile updated.' : 'Your profile has been updated.'
+    message.value = 'Your profile has been updated.'
   } catch (cause) {
     error.value = reportError(cause)
   } finally {
@@ -107,7 +106,6 @@ async function remove() {
             {{ profile.avatarName ? `@${profile.avatarName}` : 'Your Intertwine profile' }}
           </p>
         </div>
-        <span v-if="demo" class="pill">Demo profile</span>
       </div>
       <form class="stack-form" @submit.prevent="save">
         <div class="form-row">
@@ -158,8 +156,8 @@ async function remove() {
       <p>Big dreams, little quirks, and everything in between. There’s room for all of it here.</p>
       <div class="note-divider"></div>
       <p class="small">
-        Your answers can evolve with you. Two library answers or updates are free each day.
-        Each extra action costs 10 Sparks ✨.
+        Your answers can evolve with you. Two library answers or updates are free each day. Each
+        extra action costs 10 Sparks ✨.
       </p>
     </aside>
     <section class="answered-section panel">
@@ -173,7 +171,7 @@ async function remove() {
         </a>
       </div>
       <p v-if="!currentAnswers.length" class="muted">
-        Your story starts with an answer.
+        User has no Answered Questions yet.
         <a href="#questions">Explore questions →</a>
       </p>
       <div v-else class="question-grid">

@@ -8,7 +8,6 @@ import {
   getQuestions,
   submitAnswer,
 } from '../api/questionsApi'
-import { demoPackages, demoProfile, demoQuestions } from '../data/demo'
 import type {
   AuthResult,
   CreditPackage,
@@ -19,20 +18,18 @@ import type {
   Question,
   QuestionSummary,
   PaymentHistory,
+  Currency,
 } from '../models/question'
 import { localDate } from '../utils/answerRequest'
 
-const demo = ref(
-  import.meta.env.VITE_DEMO_MODE !== 'false' && !sessionStorage.getItem('intertwine.token'),
-)
 const signedIn = ref(Boolean(sessionStorage.getItem('intertwine.token')))
 const profile = ref<Profile | null>(null)
 const daily = ref<Question | null>(null)
 const questions = ref<QuestionSummary[]>([])
 const balance = ref<number | null>(null)
 const packages = ref<CreditPackage[]>([])
+const currencies = ref<Currency[]>([])
 const currentAnswers = ref<CurrentAnswer[]>([])
-const demoPayments = ref<PaymentHistory[]>([])
 const loading = ref(false)
 const error = ref('')
 const authOpen = ref(false)
@@ -44,7 +41,7 @@ const emptyActivity = () => ({
   answers: {} as Record<number, number>,
 })
 const activity = ref(emptyActivity())
-const canUseAccount = computed(() => demo.value || signedIn.value)
+const canUseAccount = computed(() => signedIn.value)
 const displayName = computed(
   () => profile.value?.firstName || (signedIn.value ? 'friend' : 'there'),
 )
@@ -62,7 +59,7 @@ function reportError(cause: unknown) {
     packages.value = []
     activity.value = emptyActivity()
     currentAnswers.value = []
-    demoPayments.value = []
+    currencies.value = []
     authOpen.value = true
   }
   return cause instanceof Error ? cause.message : 'Something went wrong. Please try again.'
@@ -75,25 +72,22 @@ async function refresh() {
   const date = localDate()
   if (date !== today.value) activity.value = emptyActivity()
   today.value = date
-  if (demo.value) {
-    profile.value ??= { ...demoProfile }
-    daily.value = demoQuestions[0]!
-    questions.value = demoQuestions
-    balance.value ??= 120
-    packages.value = demoPackages
+  if (!signedIn.value) {
+    daily.value = null
+    questions.value = []
+    profile.value = null
+    balance.value = null
+    currentAnswers.value = []
+    activity.value = emptyActivity()
     loading.value = false
     return
   }
   const results = await Promise.allSettled([
     getDailyQuestion(today.value),
-    ...(signedIn.value
-      ? [
-          getQuestions(),
-          request<Profile>('/api/UserProfile/me'),
-          getCurrentAnswers(),
-          getDailyActivity(today.value),
-        ]
-      : []),
+    getQuestions(),
+    request<Profile>('/api/UserProfile/me'),
+    getCurrentAnswers(),
+    getDailyActivity(today.value),
   ])
   if (version !== generation) return
   const dailyResult = results[0]!
@@ -103,11 +97,10 @@ async function refresh() {
     error.value = reportError(dailyResult.reason)
   } else daily.value = null
   const listResult = results[1]
-  if (listResult?.status === 'fulfilled' && signedIn.value)
-    questions.value = listResult.value as QuestionSummary[]
+  if (listResult?.status === 'fulfilled') questions.value = listResult.value as QuestionSummary[]
   else if (listResult?.status === 'rejected') error.value = reportError(listResult.reason)
   const profileResult = results[2]
-  if (profileResult?.status === 'fulfilled' && signedIn.value) {
+  if (profileResult?.status === 'fulfilled') {
     profile.value = profileResult.value as Profile
     balance.value = profile.value.creditBalance
   } else if (profileResult?.status === 'rejected') {
@@ -116,7 +109,7 @@ async function refresh() {
     else error.value = reportError(profileResult.reason)
   }
   const answersResult = results[3]
-  if (answersResult?.status === 'fulfilled' && signedIn.value) {
+  if (answersResult?.status === 'fulfilled') {
     const currentAnswers = answersResult.value as CurrentAnswer[]
     activity.value.answers = Object.fromEntries(
       currentAnswers.map((answer) => [answer.questionId, answer.answerId]),
@@ -124,7 +117,7 @@ async function refresh() {
     setCurrentAnswers(currentAnswers)
   } else if (answersResult?.status === 'rejected') error.value = reportError(answersResult.reason)
   const activityResult = results[4]
-  if (activityResult?.status === 'fulfilled' && signedIn.value) {
+  if (activityResult?.status === 'fulfilled') {
     const dailyActivity = activityResult.value as DailyActivity
     activity.value.daily = dailyActivity.dailyQuestionCreateOrUpdateUsed
     activity.value.count = dailyActivity.nonDailyQuestionsAnswered
@@ -133,7 +126,6 @@ async function refresh() {
   loading.value = false
 }
 async function detail(id: number) {
-  if (demo.value) return demoQuestions.find((q) => q.questionId === id)!
   return getQuestion(id)
 }
 function setCurrentAnswers(answers: CurrentAnswer[]) {
@@ -150,32 +142,17 @@ async function answer(question: Question, answerId: number, date: string, spendS
     throw new Error('A new day has started. Please reopen the question before answering.')
   }
   const isDaily = question.questionId === daily.value?.questionId
-  if (demo.value) {
-    if (isDaily && activity.value.daily)
-      throw new Error('You’ve already answered today’s Daily Question. Come back tomorrow.')
-    if (!isDaily && activity.value.count >= 2 && !spendSparks)
-      throw new Error('You’ve used your two question actions today. Come back tomorrow.')
-    if (!isDaily && activity.value.answers[question.questionId] === answerId)
-      throw new Error('This is already your current answer.')
-    if (!isDaily && activity.value.count >= 2) {
-      if ((balance.value ?? 0) < 10)
-        throw new Error('You need 10 Sparks. Get more Sparks and try again.')
-      balance.value = (balance.value ?? 0) - 10
-      if (profile.value) profile.value.creditBalance = balance.value
-    }
-  } else {
-    const fingerprint = `${sessionStorage.getItem('intertwine.user')}:${question.questionId}:${answerId}:${date}:${spendSparks}`
-    const key = pendingAnswers.get(fingerprint) ?? crypto.randomUUID()
-    pendingAnswers.set(fingerprint, key)
-    try {
-      await submitAnswer(question.questionId, answerId, date, key, spendSparks)
+  const fingerprint = `${sessionStorage.getItem('intertwine.user')}:${question.questionId}:${answerId}:${date}:${spendSparks}`
+  const key = pendingAnswers.get(fingerprint) ?? crypto.randomUUID()
+  pendingAnswers.set(fingerprint, key)
+  try {
+    await submitAnswer(question.questionId, answerId, date, key, spendSparks)
+    pendingAnswers.delete(fingerprint)
+  } catch (cause) {
+    // Preserve keys for ambiguous network/server/conflict retries.
+    if (cause instanceof ApiError && [400, 401, 403, 404, 429].includes(cause.status))
       pendingAnswers.delete(fingerprint)
-    } catch (cause) {
-      // Preserve keys for ambiguous network/server/conflict retries.
-      if (cause instanceof ApiError && [400, 401, 403, 404, 429].includes(cause.status))
-        pendingAnswers.delete(fingerprint)
-      throw new Error(reportError(cause))
-    }
+    throw new Error(reportError(cause))
   }
   currentAnswers.value = [
     ...currentAnswers.value.filter((x) => x.questionId !== question.questionId),
@@ -194,7 +171,7 @@ async function answer(question: Question, answerId: number, date: string, spendS
     activity.value.count++
     activity.value.remaining = Math.max(0, activity.value.remaining - 1)
   }
-  if (!demo.value) await refresh()
+  await refresh()
   return true
 }
 async function authenticate(
@@ -211,7 +188,6 @@ async function authenticate(
   sessionStorage.setItem('intertwine.token', result.token)
   sessionStorage.setItem('intertwine.user', result.userId || '')
   resetState()
-  demo.value = false
   signedIn.value = true
   authOpen.value = false
   await refresh()
@@ -223,78 +199,53 @@ function resetState() {
   daily.value = null
   questions.value = []
   packages.value = []
+  currencies.value = []
   balance.value = null
   activity.value = emptyActivity()
   pendingAnswers.clear()
   currentAnswers.value = []
-  demoPayments.value = []
   error.value = ''
 }
 async function signOut() {
   sessionStorage.removeItem('intertwine.token')
   sessionStorage.removeItem('intertwine.user')
   signedIn.value = false
-  demo.value = false
   resetState()
-  await refresh()
-}
-async function startDemo() {
-  sessionStorage.removeItem('intertwine.token')
-  sessionStorage.removeItem('intertwine.user')
-  signedIn.value = false
-  resetState()
-  demo.value = true
-  authOpen.value = false
-  await refresh()
 }
 async function saveProfile(input: ProfileInput) {
-  if (demo.value) profile.value = { ...demoProfile, ...input, creditBalance: balance.value ?? 0 }
-  else {
-    profile.value = await request<Profile>('/api/UserProfile/me', {
-      method: 'PUT',
-      body: JSON.stringify(input),
-    })
-    balance.value = profile.value.creditBalance
-  }
+  profile.value = await request<Profile>('/api/UserProfile/me', {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  })
+  balance.value = profile.value.creditBalance
 }
 async function deleteProfile() {
-  if (demo.value) {
-    profile.value = null
-    return
-  }
   await request<void>('/api/UserProfile/me', { method: 'DELETE' })
   await signOut()
 }
-async function loadWallet(currency: string) {
-  if (demo.value) {
-    packages.value = currency === 'AUD' ? demoPackages : []
-    return
-  }
+async function loadWallet(currencyCode = '') {
   const version = generation
-  const [wallet, offers] = await Promise.all([
+  const [wallet, availableCurrencies] = await Promise.all([
     request<{ creditBalance: number }>('/api/wallet'),
-    request<CreditPackage[]>(`/api/credit-packages?currencyCode=${encodeURIComponent(currency)}`),
+    request<Currency[]>('/api/currencies'),
   ])
+  if (version !== generation) return
+  currencies.value = availableCurrencies
+  const selectedCurrency = availableCurrencies.some((x) => x.code === currencyCode)
+    ? currencyCode
+    : (availableCurrencies[0]?.code ?? '')
+  const offers = selectedCurrency
+    ? await request<CreditPackage[]>(
+        `/api/credit-packages?currencyCode=${encodeURIComponent(selectedCurrency)}`,
+      )
+    : []
   if (version !== generation) return
   balance.value = wallet.creditBalance
   if (profile.value) profile.value.creditBalance = wallet.creditBalance
   packages.value = offers
+  return selectedCurrency
 }
 async function topUp(offer: CreditPackage) {
-  if (demo.value) {
-    balance.value = (balance.value ?? 0) + offer.credits
-    if (profile.value) profile.value.creditBalance = balance.value
-    demoPayments.value.unshift({
-      userPaymentId: Date.now(),
-      dateCreated: new Date().toISOString(),
-      currencyCode: offer.currencyCode,
-      amount: offer.amount,
-      sparksPurchased: offer.credits,
-      status: 'Completed',
-      paymentProvider: 'IntertwineDemo',
-    })
-    return
-  }
   const result = await request<{ creditBalance: number }>('/api/wallet/top-up', {
     method: 'POST',
     body: JSON.stringify({ creditPackageId: offer.creditPackageId }),
@@ -303,18 +254,17 @@ async function topUp(offer: CreditPackage) {
   if (profile.value) profile.value.creditBalance = result.creditBalance
 }
 async function loadPayments(page = 1): Promise<PaymentHistory[]> {
-  if (demo.value) return demoPayments.value.slice((page - 1) * 20, page * 20)
   return request<PaymentHistory[]>(`/api/wallet/payments?page=${page}`)
 }
 export function useIntertwine() {
   return {
-    demo,
     signedIn,
     profile,
     daily,
     questions,
     balance,
     packages,
+    currencies,
     currentAnswers,
     loadPayments,
     loading,
@@ -329,7 +279,6 @@ export function useIntertwine() {
     answer,
     authenticate,
     signOut,
-    startDemo,
     saveProfile,
     deleteProfile,
     loadWallet,

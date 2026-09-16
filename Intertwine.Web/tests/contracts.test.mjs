@@ -14,14 +14,13 @@ const files = [
   'utils/answerRequest',
   'api/http',
   'api/questionsApi',
-  'data/demo',
   'composables/useIntertwine',
 ]
 const vueUrl = pathToFileURL(resolve('node_modules/vue/dist/vue.runtime.esm-bundler.js')).href
 for (const file of files) {
   const source = readFileSync(resolve(`src/${file}.ts`), 'utf8').replaceAll(
     'import.meta.env',
-    '({ VITE_DEMO_MODE: "false" })',
+    '({ VITE_API_URL: "" })',
   )
   let code = ts.transpileModule(source, {
     compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext },
@@ -85,7 +84,17 @@ function standard(call) {
   if (call.path.startsWith('/api/questions/daily')) return json(question)
   if (call.path === '/api/questions') return json([{ ...question, answers: undefined }])
   if (call.path === '/api/UserProfile/me') return json(profile)
-  if (call.path === '/api/user-answers/me') return json([{ questionId: 8, answerId: 80 }])
+  if (call.path === '/api/user-answers/me')
+    return json([
+      {
+        questionId: 8,
+        answerId: 80,
+        questionTitle: 'A saved question',
+        fullQuestion: 'What did you choose?',
+        answerText: 'The saved answer',
+        categories: [],
+      },
+    ])
   if (call.path.startsWith('/api/daily-activity/me'))
     return json({
       localDate: localDate(),
@@ -147,7 +156,12 @@ test('question answers are fetched from the detail endpoint', async () => {
 test('ambiguous answer failures retain one idempotency key across retries', async () => {
   const submissions = []
   handler = (call) => {
-    if (call.path.startsWith('/api/daily-activity/me')) return json({ dailyQuestionCreateOrUpdateUsed: true, nonDailyQuestionsAnswered: 0, nonDailyQuestionsRemaining: 2 })
+    if (call.path.startsWith('/api/daily-activity/me'))
+      return json({
+        dailyQuestionCreateOrUpdateUsed: true,
+        nonDailyQuestionsAnswered: 0,
+        nonDailyQuestionsRemaining: 2,
+      })
     if (call.method !== 'POST') return standard(call)
     submissions.push(call)
     return submissions.length === 1
@@ -179,6 +193,8 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
   const offer = { creditPackageId: 2, currencyCode: 'AUD', credits: 120, amount: 9.99 }
   handler = (call) => {
     if (call.path === '/api/wallet') return json({ creditBalance: 10 })
+    if (call.path === '/api/currencies')
+      return json([{ code: 'AUD', symbol: '$', name: 'Australian Dollar', decimalPlaces: 2 }])
     if (call.path === '/api/credit-packages?currencyCode=AUD') return json([offer])
     if (call.path === '/api/wallet/top-up') {
       assert.equal(call.body, '{"creditPackageId":2}')
@@ -188,9 +204,22 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
       assert.equal(call.method, 'PUT')
       return json({ ...profile, ...JSON.parse(call.body) })
     }
+    if (call.path === '/api/wallet/payments?page=1')
+      return json([
+        {
+          userPaymentId: 4,
+          dateCreated: '2026-09-16T00:00:00Z',
+          currencyCode: 'AUD',
+          amount: 9.99,
+          sparksPurchased: 120,
+          status: 'Completed',
+          paymentProvider: 'IntertwineDemo',
+        },
+      ])
     throw new Error(`Unexpected request ${call.path}`)
   }
-  await app.loadWallet('AUD')
+  assert.equal(await app.loadWallet(), 'AUD')
+  assert.equal(app.currencies.value[0].name, 'Australian Dollar')
   assert.equal(app.balance.value, 10)
   await app.topUp(offer)
   assert.equal(app.balance.value, 130)
@@ -201,6 +230,7 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
     avatarName: 'updated',
   })
   assert.equal(app.profile.value.firstName, 'Updated')
+  assert.equal((await app.loadPayments())[0].sparksPurchased, 120)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)
@@ -218,58 +248,20 @@ test('401 clears private state and prompts sign-in', async () => {
   assert.deepEqual(app.questions.value, [])
   assert.equal(app.authOpen.value, true)
 })
-test('demo enforces one daily answer and two new-or-changed library actions without API calls', async () => {
+test('signed-out refresh does not request account or sample data', async () => {
   handler = () => {
-    throw new Error('Demo must not contact the API')
+    throw new Error('Signed-out home must not contact account APIs')
   }
-  await app.startDemo()
-  const daily = app.daily.value
-  await app.answer(daily, daily.answers[0].answerId, localDate())
-  await assert.rejects(
-    app.answer(daily, daily.answers[1].answerId, localDate()),
-    /already answered/,
-  )
-  const library = await app.detail(2)
-  await app.answer(library, library.answers[0].answerId, localDate())
-  await assert.rejects(
-    app.answer(library, library.answers[0].answerId, localDate()),
-    /already your current answer/,
-  )
-  await app.answer(library, library.answers[1].answerId, localDate())
-  await assert.rejects(
-    app.answer(library, library.answers[2].answerId, localDate()),
-    /two question actions/,
-  )
-  assert.equal(app.activity.value.count, 2)
-})
-test('paid demo answers debit ten Sparks, preserve current answers and reject repeats or insufficient funds', async () => {
-  const library = await app.detail(2)
-  const before = app.balance.value
-  await app.answer(library, library.answers[2].answerId, localDate(), true)
-  assert.equal(app.balance.value, before - 10)
-  assert.equal(app.profile.value.creditBalance, before - 10)
-  assert.equal(app.activity.value.count, 3)
-  const saved = app.currentAnswers.value.find(x => x.questionId === library.questionId)
-  assert.equal(saved.answerText, library.answers[2].answerText)
-  assert.deepEqual(saved.categories, library.categories)
-  await assert.rejects(app.answer(library, library.answers[2].answerId, localDate(), true), /already your current answer/)
-  assert.equal(app.balance.value, before - 10)
-  app.balance.value = 9
-  await assert.rejects(app.answer(library, library.answers[0].answerId, localDate(), true), /need 10 Sparks/)
-  assert.equal(app.balance.value, 9)
-  assert.equal(app.activity.value.count, 3)
-})
-test('simulated top-up updates balance and payment history', async () => {
-  const offer = app.packages.value[0]
-  await app.topUp(offer)
-  const payments = await app.loadPayments()
-  assert.equal(payments[0].sparksPurchased, offer.credits)
-  assert.equal(payments[0].status, 'Completed')
-  assert.equal(app.balance.value, 9 + offer.credits)
-  assert.equal(app.profile.value.creditBalance, app.balance.value)
+  await app.refresh()
+  assert.equal(app.signedIn.value, false)
+  assert.equal(app.daily.value, null)
+  assert.deepEqual(app.questions.value, [])
 })
 test('paid request includes explicit consent in its body', () => {
-  assert.deepEqual(JSON.parse(answerRequest(7, 70, '2026-09-15', 'paid-key', true).options.body), {answerId: 70, spendSparks: true})
+  assert.deepEqual(JSON.parse(answerRequest(7, 70, '2026-09-15', 'paid-key', true).options.body), {
+    answerId: 70,
+    spendSparks: true,
+  })
 })
 after(() => {
   globalThis.fetch = originalFetch

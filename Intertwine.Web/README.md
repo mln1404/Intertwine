@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-Open the URL printed by Vite. The default is a **clearly labelled demo preview** with sample questions, an editable sample profile, and simulated credit top-ups. Demo answers, profile changes, and credits are held in memory and reset on reload. Demo actions do not contact the API.
+Open the URL printed by Vite. Signed-out visitors see the public Intertwine home and login/registration screen. Questions, answers, profile information, Spark balance, packages, and payment history are loaded only after authentication.
 
 ## Connect to the Intertwine API
 
@@ -19,15 +19,16 @@ Open the URL printed by Vite. The default is a **clearly labelled demo preview**
 Copy-Item .env.example .env.local
 ```
 
-Set `VITE_DEMO_MODE=false` in `.env.local`, then restart Vite. Start the `Intertwine.API` project from the same solution with its SQL Server and Redis dependencies. The Vite development proxy forwards `/api` to `http://localhost:5288`; override `API_PROXY_TARGET` if needed. Keep `VITE_API_URL` empty when using this proxy. If ASP.NET redirects HTTP to HTTPS, use the HTTP launch profile or configure a trusted HTTPS target.
+Start the `Intertwine.API` project from the same solution with its SQL Server and Redis dependencies. The Vite development proxy forwards `/api` to `http://localhost:5288`; override `API_PROXY_TARGET` if needed. Keep `VITE_API_URL` empty when using this proxy. If ASP.NET redirects HTTP to HTTPS, use the HTTP launch profile or configure a trusted HTTPS target.
 
-The sign-in dialog always connects to the real API, including from demo mode. Successful sign-in clears sample state and loads the authenticated user's data. Access tokens are held in `sessionStorage` for the current browser tab and removed on sign-out or an expired-session response. Nothing reads the old starter's `localStorage.accessToken` entry.
+The home-page sign-in form connects to the real API. Successful sign-in loads the authenticated user's data. Access tokens are held in `sessionStorage` for the current browser tab and removed on sign-out or an expired-session response.
 
 ## Screens and behaviour
 
 - **For you:** local-date Daily Question, selectable answers, submission feedback, a completed state, and session activity.
 - **Explore questions:** search, category filters derived from the question list, and question details loaded when opened.
-- **My wallet:** balance, currency selection, available credit packages, and a confirmation before a top-up. Ambiguous failures prompt a balance check; purchases are never automatically retried.
+- **Get Sparky:** balance, API-provided currencies, available credit packages, and simulated one-click top-ups. Ambiguous failures prompt a balance check; purchases are never automatically retried.
+- **Payment history:** authenticated purchase history from the wallet API.
 - **My profile:** view and edit the supported name fields, with an explicit typed confirmation before deleting the profile.
 - **Accounts:** registration, sign-in, sign-out, validation messages, and expired-session handling.
 - Responsive desktop sidebar/mobile bottom navigation, labelled form inputs, native modal focus containment, keyboard navigation, loading/error/empty states, and reduced-motion support.
@@ -48,7 +49,9 @@ Hash navigation (`#today`, `#questions`, `#wallet`, `#profile`) supports browser
 | Daily activity              | `GET /api/daily-activity/me?localDate=YYYY-MM-DD`      |
 | Wallet                      | `GET /api/wallet`                                      |
 | Packages                    | `GET /api/credit-packages?currencyCode=AUD`            |
+| Currencies                  | `GET /api/currencies`                                  |
 | Top-up                      | `POST /api/wallet/top-up`                              |
+| Payment history             | `GET /api/wallet/payments?page=1`                      |
 
 Answers send `{ answerId }` and an `Idempotency-Key` header. The key is reused for the same user/question/answer/date after network errors, server failures, and conflicts within the current page session. The browser supplies its **local calendar date**, including across UTC boundaries. Day changes refresh the daily question; a submission from the previous date is rejected locally and asks the user to reopen it.
 
@@ -56,7 +59,7 @@ The server remains authoritative for the one Daily Question action and two non-d
 
 Registration returns success without a token, so users sign in separately. The backend creates the Identity account, `UserProfile`, and zero-balance `UserWallet` during registration. Deleting a profile does not delete its Identity account.
 
-The existing wallet implementation records a completed `IntertwineDemo` payment; it does not charge a card. Both live and preview wallet screens disclose this. A real checkout requires backend payment integration.
+The existing wallet implementation records a completed `IntertwineDemo` payment; it does not charge a card. The wallet screen discloses this. A real checkout requires backend payment integration.
 
 ## Verify and build
 
@@ -66,11 +69,11 @@ npm run build
 npm run preview
 ```
 
-The nine isolated contract tests cover UTC date boundaries, request shape, registration/login, question details, idempotency-key reuse, server limit errors, wallet/profile requests, session expiry, and demo daily rules. They use the actual TypeScript modules with mocked HTTP responses; they do not connect to real accounts, databases, or payment providers. The test runner transpiles temporary modules using the existing TypeScript dependency and removes only its own temporary directory.
+The isolated contract tests cover UTC date boundaries, request shape, registration/login, question details, idempotency-key reuse, server limit errors, wallet/currency/package/profile requests, session expiry, and signed-out API isolation. They use the actual TypeScript modules with mocked HTTP responses; they do not connect to real accounts, databases, Redis, or payment providers.
 
-The UI was also checked in-browser for daily submission/locking, search, question dialogs, new and changed answers, the daily action limit, demo top-ups, profile editing, and a 390px mobile layout. Full live API integration requires the backend and a provisioned test account.
+Full live integration requires the backend, SQL Server, Redis, and a provisioned account. Empty API results remain empty and display explicit messages such as “No Daily Question” and “No Credit Packages found.”
 
-Production output is in `dist/`. The development proxy is not included in the production bundle or the preview server. Serve `/api` through your production reverse proxy, or set `VITE_API_URL` at build time to an HTTPS API origin with an appropriate CORS policy. Set `VITE_DEMO_MODE=false` for a live deployment. Typography uses Google Fonts with local sans-serif fallbacks; all artwork and icons are local SVG.
+Production output is in `dist/`. The development proxy is not included in the production bundle or the preview server. Serve `/api` through your production reverse proxy, or set `VITE_API_URL` at build time to an HTTPS API origin with an appropriate CORS policy. Typography uses Google Fonts with local sans-serif fallbacks; all artwork and icons are local SVG.
 
 ## Source layout
 
@@ -79,7 +82,6 @@ src/
   api/              Typed HTTP client and question endpoints
   components/       Shared icons, dialogs, authentication, answer form
   composables/      Shared session, questions, profile, and wallet state
-  data/             Explicit sample data for preview mode
   models/           Types aligned with backend DTOs
   utils/            Local calendar date and answer-request construction
   views/            Questions, wallet, and profile screens

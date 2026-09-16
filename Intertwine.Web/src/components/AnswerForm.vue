@@ -4,7 +4,7 @@ import type { Question } from '../models/question'
 import { useIntertwine } from '../composables/useIntertwine'
 import AppIcon from './AppIcon.vue'
 const props = defineProps<{ question: Question; date: string }>()
-const { activity, daily, demo, answer, canUseAccount, authOpen, balance } = useIntertwine()
+const { activity, daily, answer, canUseAccount, authOpen, balance } = useIntertwine()
 const spendSparks = ref(false)
 const needsSparks = computed(() => !isDaily.value && activity.value.remaining === 0)
 const selected = ref<number | null>(null)
@@ -74,7 +74,7 @@ async function submit() {
     </div>
     <p v-if="success || locked" class="inline-message success" role="status">
       <AppIcon name="check" :size="18" />
-      {{ demo ? 'Demo answer saved.' : 'Your answer is saved.' }}
+      Your answer is saved.
       {{
         isDaily
           ? 'A little more you, shared. See you tomorrow.'

@@ -7,7 +7,7 @@
 - `GET /api/user-answers/me` returns current selections with question text, answer text and categories. The profile shows these after sign-in and refresh.
 - Two non-daily answers/updates are free per local date. Subsequent actions cost 10 Sparks each. The UI requires a checked spending consent box; the API requires `spendSparks: true` in the existing answer request. Same-answer resubmissions are rejected. The Daily Question remains once per date.
 - The server stages the answer, activity, wallet debit and signed `CreditSpend` ledger entry in one EF SaveChanges transaction. Wallet row versions and activity/answer concurrency tokens reject overlapping writes. The migration only updates EF metadata; its SQL Up/Down operations are empty.
-- Get Sparky (`#wallet`) adds a chosen package immediately through the existing simulated top-up endpoint. No real payment is taken. Backend purchases persist; preview/demo data lasts for the current session.
+- Get Sparky (`#wallet`) loads currencies and packages from the API and adds a chosen package through the simulated top-up endpoint. No real payment is taken, and backend purchases persist.
 - Spark balances link to `#payments`. `GET /api/wallet/payments?page=1` returns the authenticated user's purchase snapshots, newest first, 20 per page. This is purchase history, not a complete spending ledger.
 - The UI uses Sparks and the supplied amber palette. Existing database/API names such as `CreditBalance` and `Credits` remain compatible with existing clients.
 

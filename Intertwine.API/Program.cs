@@ -65,6 +65,7 @@ builder.Services.AddScoped<IUserProfileService, UserProfileService>();
 
 // Financial services
 builder.Services.AddScoped<ICreditPackageService, CreditPackageService>();
+builder.Services.AddScoped<ICurrencyService, CurrencyService>();
 builder.Services.AddScoped<IWalletService, WalletService>();
 #endregion
 
@@ -81,6 +82,7 @@ builder.Services.AddScoped<IDailyQuestionCache, RedisDailyQuestionCache>();
 
 // Financial repositories
 builder.Services.AddScoped<ICreditPackageRepository, CreditPackageRepository>();
+builder.Services.AddScoped<ICurrencyRepository, CurrencyRepository>();
 builder.Services.AddScoped<IFinancialTransactionRepository, FinancialTransactionRepository>();
 builder.Services.AddScoped<IUserPaymentRepository, UserPaymentRepository>();
 builder.Services.AddScoped<IUserWalletRepository, UserWalletRepository>();

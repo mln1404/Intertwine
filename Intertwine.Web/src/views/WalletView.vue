@@ -3,9 +3,10 @@ import { onMounted, ref, watch } from 'vue'
 import { useIntertwine } from '../composables/useIntertwine'
 import type { CreditPackage } from '../models/question'
 import AppIcon from '../components/AppIcon.vue'
-const { demo, balance, packages, canUseAccount, authOpen, loadWallet, topUp, reportError } =
+const { balance, packages, currencies, canUseAccount, authOpen, loadWallet, topUp, reportError } =
   useIntertwine()
-const currency = ref('AUD')
+const currency = ref('')
+const initializing = ref(true)
 const loading = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -22,7 +23,8 @@ async function load() {
   error.value = ''
   packages.value = []
   try {
-    await loadWallet(currency.value)
+    const selectedCurrency = await loadWallet(currency.value)
+    if (selectedCurrency) currency.value = selectedCurrency
   } catch (cause) {
     error.value = reportError(cause)
   } finally {
@@ -44,8 +46,13 @@ async function purchase(offer: CreditPackage) {
     busy.value = false
   }
 }
-watch(currency, load)
-onMounted(load)
+watch(currency, () => {
+  if (!initializing.value) void load()
+})
+onMounted(async () => {
+  await load()
+  initializing.value = false
+})
 </script>
 <template>
   <header class="page-heading">
@@ -99,12 +106,10 @@ onMounted(load)
         </div>
         <label class="currency-label">
           Currency
-          <select v-model="currency" :disabled="loading || busy">
-            <option>AUD</option>
-            <option>USD</option>
-            <option>PHP</option>
-            <option>EUR</option>
-            <option>GBP</option>
+          <select v-model="currency" :disabled="loading || busy || !currencies.length">
+            <option v-for="item in currencies" :key="item.code" :value="item.code">
+              {{ item.code }} · {{ item.name }}
+            </option>
           </select>
         </label>
       </div>
@@ -136,16 +141,13 @@ onMounted(load)
         </article>
       </div>
       <div v-else class="empty-state panel">
-        <h3>No packages available.</h3>
-        <p>Try another currency or check back later.</p>
+        <h3>No Credit Packages found</h3>
+        <p v-if="currencies.length">No active packages are connected to {{ currency }}.</p>
+        <p v-else>No active currencies were returned by the API.</p>
       </div>
       <p class="small muted wallet-footnote">
         <AppIcon name="lock" :size="14" />
-        {{
-          demo
-            ? 'These are sample packages for the UI preview.'
-            : 'This records a simulated payment. No card details are collected and no money is charged.'
-        }}
+        This records a simulated payment. No card details are collected and no money is charged.
       </p>
     </section>
   </template>
