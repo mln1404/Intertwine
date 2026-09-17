@@ -124,7 +124,7 @@ public class AuthService : IAuthService
                 user.Id);
         }
 
-        var token = _tokenService.GenerateToken(user.Id, user.Email!);
+        var token = _tokenService.GenerateAccessToken(user.Id, user.Email!);
         return new AuthResult
         {
             Succeeded = true,

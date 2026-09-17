@@ -117,7 +117,7 @@ public class AuthServiceTests
         Assert.False(result.Succeeded);
         Assert.Equal(AuthMessages.InvalidCredentials, result.Error);
         tokenService.Verify(
-            x => x.GenerateToken(It.IsAny<string>(), It.IsAny<string>()),
+            x => x.GenerateAccessToken(It.IsAny<string>(), It.IsAny<string>()),
             Times.Never);
     }
 
@@ -127,7 +127,7 @@ public class AuthServiceTests
         var user = CreateIdentityUser();
         var userManager = CreateValidLoginUserManager(user);
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
-        tokenService.Setup(x => x.GenerateToken(user.Id, user.Email!))
+        tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
         var service = CreateService(userManager, tokenService);
 
@@ -155,7 +155,7 @@ public class AuthServiceTests
             .Callback(() => profile.IsActive = true)
             .Returns(Task.CompletedTask);
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
-        tokenService.Setup(x => x.GenerateToken(user.Id, user.Email!))
+        tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
         var service = CreateService(userManager, tokenService, profiles);
 
