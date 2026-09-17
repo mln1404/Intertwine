@@ -6,6 +6,7 @@ using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using Microsoft.Extensions.Options;
 using Service = Intertwine.Services.Services.AuthService;
 
 namespace Intertwine.UnitTests.Services.AuthService;
@@ -200,12 +201,26 @@ public class AuthServiceTests
     private static Service CreateService(
         Mock<UserManager<ApplicationUser>> userManager,
         Mock<ITokenService>? tokenService = null,
-        Mock<IUserProfileRepository>? userProfileRepository = null)
+        Mock<IUserProfileRepository>? userProfileRepository = null,
+        Mock<IRefreshTokenRepository>? refreshTokenRepository = null,
+        Mock<IUnitOfWork>? unitOfWork = null,
+        JwtSettings? jwtSettings = null)
     {
+        var refreshRepo = (refreshTokenRepository ?? new Mock<IRefreshTokenRepository>()).Object;
+
+        var uowMock = unitOfWork ?? new Mock<IUnitOfWork>();
+        uowMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var options = Options.Create(jwtSettings ?? new JwtSettings { RefreshTokenExpiryDays = 7 });
+
         return new Service(
             userManager.Object,
             (userProfileRepository ?? new Mock<IUserProfileRepository>()).Object,
-            (tokenService ?? new Mock<ITokenService>()).Object);
+            (tokenService ?? new Mock<ITokenService>()).Object,
+            refreshRepo,
+            uowMock.Object,
+            options);
     }
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManager()

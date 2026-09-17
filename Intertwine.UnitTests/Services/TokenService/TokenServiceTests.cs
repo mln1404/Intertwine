@@ -18,7 +18,7 @@ public class TokenServiceTests
             Key = "unit-test-signing-key-with-at-least-32-bytes",
             Issuer = "Intertwine.UnitTests",
             Audience = "Intertwine.Client",
-            AccessTokenExpiryMinutes = 30
+            AccessTokenExpiryMinutes = 1
         };
         var service = new Service(Options.Create(settings));
         var beforeGeneration = DateTime.UtcNow;
