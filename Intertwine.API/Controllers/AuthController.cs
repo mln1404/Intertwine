@@ -21,6 +21,68 @@ public class AuthController : ControllerBase
         _authService = authService;
     }
 
+    [HttpPost("login")]
+    /// <summary>
+    /// Authenticates a user and returns an access token.
+    /// </summary>
+    public async Task<IActionResult> Login(LoginRequest request)
+    {
+        var result = await _authService.LoginAsync(request);
+
+        if (!result.Succeeded)
+        {
+            return Unauthorized(result);
+        }
+
+        if (!string.IsNullOrWhiteSpace(result.RefreshToken))
+        {
+            Response.Cookies.Append(
+                AuthConstants.RefreshTokenCookieName,
+                result.RefreshToken,
+                new CookieOptions
+                {
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict,
+                    Expires = result.RefreshTokenExpiresAtUtc
+                });
+        }
+
+        return Ok(result);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> Refresh()
+    {
+        if (!Request.Cookies.TryGetValue(
+            AuthConstants.RefreshTokenCookieName,
+            out var refreshToken))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _authService.RefreshAsync(refreshToken);
+
+        if (!result.Succeeded)
+        {
+            Response.Cookies.Delete(AuthConstants.RefreshTokenCookieName);
+            return Unauthorized(result);
+        }
+
+        Response.Cookies.Append(
+            AuthConstants.RefreshTokenCookieName,
+            result.RefreshToken!,
+            new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = true,
+                SameSite = SameSiteMode.Strict,
+                Expires = result.RefreshTokenExpiresAtUtc
+            });
+
+        return Ok(result);
+    }
+
     [HttpPost("register")]
     /// <summary>
     /// Registers an identity user from the supplied credentials.
@@ -36,21 +98,4 @@ public class AuthController : ControllerBase
 
         return Ok(result);
     }
-
-    [HttpPost("login")]
-    /// <summary>
-    /// Authenticates a user and returns an access token.
-    /// </summary>
-    public async Task<IActionResult> Login(LoginRequest request)
-    {
-        var result = await _authService.LoginAsync(request);
-
-        if (!result.Succeeded)
-        {
-            return Unauthorized(result);
-        }
-
-        return Ok(result);
-    }
 }
-

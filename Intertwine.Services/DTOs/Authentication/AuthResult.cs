@@ -11,4 +11,7 @@ public class AuthResult
 
     [JsonIgnore]
     public string? RefreshToken { get; set; }
+
+    [JsonIgnore]
+    public DateTime? RefreshTokenExpiresAtUtc{ get; set; }
 }

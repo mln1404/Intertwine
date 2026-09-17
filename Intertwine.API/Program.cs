@@ -86,6 +86,8 @@ builder.Services.AddScoped<ICurrencyRepository, CurrencyRepository>();
 builder.Services.AddScoped<IFinancialTransactionRepository, FinancialTransactionRepository>();
 builder.Services.AddScoped<IUserPaymentRepository, UserPaymentRepository>();
 builder.Services.AddScoped<IUserWalletRepository, UserWalletRepository>();
+
+builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 #endregion
 
 // Configure JwtSettings from configuration
