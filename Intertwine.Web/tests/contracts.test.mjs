@@ -15,6 +15,8 @@ const files = [
   'utils/answerRequest',
   'stores/pinia',
   'stores/authStore',
+  'api/apiConfig',
+  'api/authApi',
   'api/http',
   'api/questionsApi',
   'composables/useIntertwine',
@@ -56,10 +58,13 @@ const { useIntertwine } = await import(
   pathToFileURL(join(runtime, 'composables/useIntertwine.mjs'))
 )
 const { request, ApiError, apiClient } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
+const { refreshClient, refreshSession } = await import(
+  pathToFileURL(join(runtime, 'api/authApi.mjs'))
+)
 const { useAuthStore } = await import(pathToFileURL(join(runtime, 'stores/authStore.mjs')))
 const { pinia } = await import(pathToFileURL(join(runtime, 'stores/pinia.mjs')))
 const { createPinia } = await import('pinia')
-apiClient.defaults.adapter = async (config) => {
+async function mockAdapter(config) {
   const call = {
     path: config.url,
     method: (config.method || 'GET').toUpperCase(),
@@ -90,6 +95,8 @@ apiClient.defaults.adapter = async (config) => {
     )
   return result
 }
+apiClient.defaults.adapter = mockAdapter
+refreshClient.defaults.adapter = mockAdapter
 const app = useIntertwine()
 const question = {
   questionId: 7,
@@ -372,17 +379,21 @@ test('401 clears private state and prompts sign-in', async () => {
   assert.deepEqual(app.questions.value, [])
   assert.equal(app.authOpen.value, true)
 })
-test('HTTP client preserves API errors without changing authentication', async () => {
+test('HTTP client preserves non-authentication API errors', async () => {
   const auth = useAuthStore(pinia)
   auth.setSession('temporary-token', 'temporary-user')
-  handler = () => json({}, 401)
+  calls.length = 0
+  handler = () => json({}, 403)
   await assert.rejects(request('/api/private'), (error) => {
     assert.ok(error instanceof ApiError)
-    assert.equal(error.status, 401)
-    assert.match(error.message, /session has ended/)
+    assert.equal(error.status, 403)
     return true
   })
   assert.equal(auth.signedIn, true)
+  assert.equal(
+    calls.some((call) => call.path === '/api/Auth/refresh'),
+    false,
+  )
 
   handler = () => json({ errors: { Email: ['Email is required.'] } }, 400)
   await assert.rejects(request('/api/validation'), /Email is required/)
@@ -394,6 +405,171 @@ test('HTTP client preserves API errors without changing authentication', async (
   await assert.rejects(request('/api/offline'), /couldn’t reach Intertwine/)
   handler = () => new Response('not JSON', { headers: { 'Content-Type': 'text/plain' } })
   await assert.rejects(request('/api/unexpected'), /unexpected response/)
+  auth.clearSession()
+})
+test('successful request does not refresh', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('valid-token', 'test-user')
+  calls.length = 0
+  handler = (call) => {
+    assert.equal(call.path, '/api/private')
+    assert.equal(call.headers.get('Authorization'), 'Bearer valid-token')
+    return json({ ok: true })
+  }
+  assert.deepEqual(await request('/api/private'), { ok: true })
+  assert.equal(calls.length, 1)
+  auth.clearSession()
+})
+test('one 401 refreshes through the cookie client and retries with the new access token', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  handler = (call) => {
+    if (call.path === '/api/Auth/refresh') {
+      assert.equal(call.method, 'POST')
+      assert.equal(call.body, undefined)
+      assert.equal(call.withCredentials, true)
+      assert.equal(call.timeout, 15000)
+      assert.equal(call.headers.get('Authorization'), undefined)
+      return json({ succeeded: true, token: 'new-token', userId: 'new-user' })
+    }
+    assert.equal(call.path, '/api/private')
+    return call.headers.get('Authorization') === 'Bearer expired-token'
+      ? json({}, 401)
+      : json({ ok: true })
+  }
+  assert.deepEqual(await request('/api/private'), { ok: true })
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  assert.equal(calls.filter((call) => call.path === '/api/private').length, 2)
+  assert.equal(calls.at(-1).headers.get('Authorization'), 'Bearer new-token')
+  assert.equal(auth.accessToken, 'new-token')
+  assert.equal(auth.userId, 'new-user')
+  assert.equal(sessionStorage.getItem('intertwine.token'), 'new-token')
+  auth.clearSession()
+})
+test('failed refresh clears the Pinia session and returns a session-ended error', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  handler = () => json({}, 401)
+  await assert.rejects(request('/api/private'), (error) => {
+    assert.ok(error instanceof ApiError)
+    assert.equal(error.status, 401)
+    assert.match(error.message, /session has ended/)
+    return true
+  })
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  assert.equal(auth.signedIn, false)
+  assert.equal(sessionStorage.getItem('intertwine.token'), null)
+})
+test('the refresh endpoint 401 never attempts another refresh', async () => {
+  calls.length = 0
+  handler = () => json({}, 401)
+  await assert.rejects(refreshSession(), (error) => {
+    assert.equal(error.response?.status, 401)
+    return true
+  })
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+})
+test('a retried 401 stops after one refresh', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  handler = (call) =>
+    call.path === '/api/Auth/refresh'
+      ? json({ succeeded: true, token: 'new-token', userId: 'test-user' })
+      : json({}, 401)
+  await assert.rejects(request('/api/private'), (error) => {
+    assert.ok(error instanceof ApiError)
+    assert.equal(error.status, 401)
+    return true
+  })
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  assert.equal(calls.filter((call) => call.path === '/api/private').length, 2)
+  auth.clearSession()
+})
+test('concurrent 401 responses share one rotating refresh operation', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  let finishRefresh = () => {}
+  const refreshGate = new Promise((resolve) => {
+    finishRefresh = resolve
+  })
+  handler = (call) => {
+    if (call.path === '/api/Auth/refresh')
+      return refreshGate.then(() =>
+        json({ succeeded: true, token: 'new-token', userId: 'test-user' }),
+      )
+    return call.headers.get('Authorization') === 'Bearer expired-token'
+      ? json({}, 401)
+      : json({ ok: true })
+  }
+  const pending = Array.from({ length: 5 }, (_, index) => request(`/api/private/${index}`))
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  finishRefresh()
+  assert.deepEqual(
+    await Promise.all(pending),
+    Array.from({ length: 5 }, () => ({ ok: true })),
+  )
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  assert.equal(calls.filter((call) => call.path.startsWith('/api/private/')).length, 10)
+  auth.clearSession()
+})
+test('a late 401 from the old token retries without rotating again', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  let releaseOldResponse = () => {}
+  const oldResponseGate = new Promise((resolve) => {
+    releaseOldResponse = resolve
+  })
+  handler = (call) => {
+    if (call.path === '/api/Auth/refresh')
+      return json({ succeeded: true, token: 'new-token', userId: 'test-user' })
+    if (call.headers.get('Authorization') === 'Bearer new-token') return json({ ok: true })
+    return call.path === '/api/slow' ? oldResponseGate.then(() => json({}, 401)) : json({}, 401)
+  }
+  const slow = request('/api/slow')
+  assert.deepEqual(await request('/api/fast'), { ok: true })
+  releaseOldResponse()
+  assert.deepEqual(await slow, { ok: true })
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  auth.clearSession()
+})
+test('sign-out while refresh is pending does not restore the session', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  let finishRefresh = () => {}
+  const refreshGate = new Promise((resolve) => {
+    finishRefresh = resolve
+  })
+  handler = (call) =>
+    call.path === '/api/Auth/refresh'
+      ? refreshGate.then(() => json({ succeeded: true, token: 'new-token', userId: 'test-user' }))
+      : json({}, 401)
+  const pending = request('/api/private')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  auth.clearSession()
+  finishRefresh()
+  await assert.rejects(pending, { status: 401 })
+  assert.equal(auth.signedIn, false)
+  assert.equal(sessionStorage.getItem('intertwine.token'), null)
+})
+test('login and registration 401 responses do not refresh', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('old-token', 'test-user')
+  calls.length = 0
+  handler = () => json({}, 401)
+  await assert.rejects(request('/api/Auth/login', { method: 'POST' }), { status: 401 })
+  await assert.rejects(request('/api/Auth/register', { method: 'POST' }), { status: 401 })
+  assert.equal(
+    calls.some((call) => call.path === '/api/Auth/refresh'),
+    false,
+  )
   auth.clearSession()
 })
 test('HTTP client forwards request cancellation signals', async () => {

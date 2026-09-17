@@ -62,6 +62,7 @@ const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
   if (cause instanceof ApiError && cause.status === 401) {
+    // Protected requests reach this point only after Axios has attempted refresh and one retry.
     auth.clearSession()
     profile.value = null
     profileLoaded.value = false
