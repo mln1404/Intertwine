@@ -1,10 +1,11 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
+using Intertwine.Services.DTOs.Authentication;
+using Intertwine.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Intertwine.Services.Interfaces;
-using Intertwine.Services.DTOs.Authentication;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace Intertwine.Services.Services;
 
@@ -20,7 +21,7 @@ public class TokenService : ITokenService
         _settings = options.Value;
     }
 
-    public string GenerateToken(string userId, string userName)
+    public string GenerateAccessToken(string userId, string userName)
     {
         var keyBytes = Encoding.UTF8.GetBytes(_settings.Key);
         var signingKey = new SymmetricSecurityKey(keyBytes);
@@ -34,7 +35,7 @@ public class TokenService : ITokenService
             new Claim(ClaimTypes.Name, userName)
         };
 
-        var expires = DateTime.UtcNow.AddMinutes(_settings.ExpiryMinutes);
+        var expires = DateTime.UtcNow.AddMinutes(_settings.AccessTokenExpiryMinutes);
 
         var token = new JwtSecurityToken(
             issuer: _settings.Issuer,
@@ -45,5 +46,20 @@ public class TokenService : ITokenService
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    public string GenerateRefreshToken()
+    {
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+
+        return Convert.ToBase64String(randomBytes);
+    }
+
+    public string HashRefreshToken(string refreshToken)
+    {
+        var tokenBytes = Encoding.UTF8.GetBytes(refreshToken);
+        var hashBytes = SHA256.HashData(tokenBytes);
+
+        return Convert.ToHexString(hashBytes);
     }
 }

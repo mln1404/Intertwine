@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
@@ -64,6 +64,10 @@ namespace Intertwine.Repositories.Data
         public DbSet<UserPayment> UserPayments => Set<UserPayment>();
         public DbSet<FinancialTransaction> FinancialTransactions
             => Set<FinancialTransaction>();
+        #endregion
+
+        #region Authentication
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
         #endregion
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

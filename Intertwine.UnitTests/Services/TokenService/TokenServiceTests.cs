@@ -11,19 +11,19 @@ namespace Intertwine.UnitTests.Services.TokenService;
 public class TokenServiceTests
 {
     [Fact]
-    public void GenerateToken_CreatesValidSignedTokenWithExpectedClaims()
+    public void GenerateAccessToken_CreatesValidSignedTokenWithExpectedClaims()
     {
         var settings = new JwtSettings
         {
             Key = "unit-test-signing-key-with-at-least-32-bytes",
             Issuer = "Intertwine.UnitTests",
             Audience = "Intertwine.Client",
-            ExpiryMinutes = 30
+            AccessTokenExpiryMinutes = 30
         };
         var service = new Service(Options.Create(settings));
         var beforeGeneration = DateTime.UtcNow;
 
-        var encodedToken = service.GenerateToken(
+        var encodedToken = service.GenerateAccessToken(
             "identity-1",
             "person@example.com");
 
