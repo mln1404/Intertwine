@@ -126,10 +126,10 @@ onUnmounted(() => pageRequests.abort())
                 : 'There isn’t a Daily Question assigned for today yet.Explore the library in the meantime.'
             }}
           </p>
-          <a href="#questions" class="button secondary">
+          <RouterLink to="/questions" class="button secondary">
             Explore questions
             <AppIcon name="arrow" :size="16" />
-          </a>
+          </RouterLink>
         </div>
       </section>
       <aside class="daily-aside">
@@ -199,10 +199,10 @@ onUnmounted(() => pageRequests.abort())
           <p class="eyebrow">FOLLOW YOUR CURIOSITY</p>
           <h2>A little more to explore</h2>
         </div>
-        <a href="#questions" class="text-link">
+        <RouterLink to="/questions" class="text-link">
           All questions
           <AppIcon name="arrow" :size="16" />
-        </a>
+        </RouterLink>
       </div>
       <div v-if="featured.length" class="question-grid">
         <button

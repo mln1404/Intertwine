@@ -81,12 +81,12 @@ onMounted(async () => {
     <section class="wallet-banner">
       <div>
         <span class="eyebrow">SPARK BALANCE</span>
-        <a class="balance" href="#payments" aria-label="Spark balance and payment history">
+        <RouterLink class="balance" to="/payments" aria-label="Spark balance and payment history">
           {{ balance === null ? '—' : balance.toLocaleString() }}
           <span>✨</span>
-        </a>
+        </RouterLink>
         <p>Simulated top-ups: click a package to add Sparks immediately. No payment is taken.</p>
-        <a class="text-link" href="#payments">View payment history →</a>
+        <RouterLink class="text-link" to="/payments">View payment history →</RouterLink>
       </div>
       <AppIcon name="wallet" :size="76" />
     </section>

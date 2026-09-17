@@ -35,7 +35,7 @@ onBeforeMount(() => void load())
       <h1>Payment history</h1>
       <p class="muted">Your Spark top-ups, all in one place.</p>
     </div>
-    <a class="button primary" href="#wallet">Get Sparky ✨</a>
+    <RouterLink class="button primary" to="/wallet">Get Sparky ✨</RouterLink>
   </header>
   <div v-if="!canUseAccount" class="empty-state panel">
     <p>Sign in to see your payments.</p>
