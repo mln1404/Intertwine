@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import ts from 'typescript'
+import { AxiosError, AxiosHeaders } from 'axios'
 
 // Exercise the real TypeScript API and composable modules with isolated network
 // responses. No database, real account, Redis, or payment provider is contacted.
@@ -20,6 +21,7 @@ const files = [
 ]
 const vueUrl = pathToFileURL(resolve('node_modules/vue/dist/vue.runtime.esm-bundler.js')).href
 const piniaUrl = pathToFileURL(resolve('node_modules/pinia/dist/pinia.js')).href
+const axiosUrl = pathToFileURL(resolve('node_modules/axios/index.js')).href
 for (const file of files) {
   const source = readFileSync(resolve(`src/${file}.ts`), 'utf8').replaceAll(
     'import.meta.env',
@@ -32,6 +34,7 @@ for (const file of files) {
     .replace(/from ['"](\.[^'"]+)['"]/g, "from '$1.mjs'")
     .replace(/from ['"]vue['"]/g, `from '${vueUrl}'`)
     .replace(/from ['"]pinia['"]/g, `from '${piniaUrl}'`)
+    .replace(/from ['"]axios['"]/g, `from '${axiosUrl}'`)
   const destination = join(runtime, `${file}.mjs`)
   mkdirSync(dirname(destination), { recursive: true })
   writeFileSync(destination, code)
@@ -42,14 +45,8 @@ globalThis.sessionStorage = {
   setItem: (key, value) => storage.set(key, value),
   removeItem: (key) => storage.delete(key),
 }
-const originalFetch = globalThis.fetch
 const calls = []
 let handler
-globalThis.fetch = async (path, options) => {
-  const call = { path, ...options }
-  calls.push(call)
-  return handler(call)
-}
 const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 const { localDate, answerRequest } = await import(
@@ -58,9 +55,41 @@ const { localDate, answerRequest } = await import(
 const { useIntertwine } = await import(
   pathToFileURL(join(runtime, 'composables/useIntertwine.mjs'))
 )
-const { request, ApiError } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
+const { request, ApiError, apiClient } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
 const { useAuthStore } = await import(pathToFileURL(join(runtime, 'stores/authStore.mjs')))
+const { pinia } = await import(pathToFileURL(join(runtime, 'stores/pinia.mjs')))
 const { createPinia } = await import('pinia')
+apiClient.defaults.adapter = async (config) => {
+  const call = {
+    path: config.url,
+    method: (config.method || 'GET').toUpperCase(),
+    headers: config.headers,
+    body: config.data,
+    signal: config.signal,
+    withCredentials: config.withCredentials,
+    timeout: config.timeout,
+  }
+  calls.push(call)
+  const response = await handler(call)
+  const contentType = response.headers.get('Content-Type')
+  const result = {
+    data: contentType?.includes('json') ? await response.json() : await response.text(),
+    status: response.status,
+    statusText: response.statusText,
+    headers: new AxiosHeaders(contentType ? { 'content-type': contentType } : {}),
+    config,
+    request: null,
+  }
+  if (!response.ok)
+    throw new AxiosError(
+      `Request failed with status code ${response.status}`,
+      undefined,
+      config,
+      null,
+      result,
+    )
+  return result
+}
 const app = useIntertwine()
 const question = {
   questionId: 7,
@@ -162,6 +191,8 @@ test('login loads only the profile before the question screen requests question 
     calls.find((call) => call.path === '/api/questions').headers.get('Authorization'),
     'Bearer test-token',
   )
+  assert.equal(apiClient.defaults.withCredentials, true)
+  assert.equal(apiClient.defaults.timeout, 15000)
 })
 test('legacy account can create its missing profile without loading profile-dependent data first', async () => {
   await app.signOut()
@@ -341,6 +372,38 @@ test('401 clears private state and prompts sign-in', async () => {
   assert.deepEqual(app.questions.value, [])
   assert.equal(app.authOpen.value, true)
 })
+test('HTTP client preserves API errors without changing authentication', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('temporary-token', 'temporary-user')
+  handler = () => json({}, 401)
+  await assert.rejects(request('/api/private'), (error) => {
+    assert.ok(error instanceof ApiError)
+    assert.equal(error.status, 401)
+    assert.match(error.message, /session has ended/)
+    return true
+  })
+  assert.equal(auth.signedIn, true)
+
+  handler = () => json({ errors: { Email: ['Email is required.'] } }, 400)
+  await assert.rejects(request('/api/validation'), /Email is required/)
+  handler = () => json({}, 429)
+  await assert.rejects(request('/api/limited'), /Too many attempts/)
+  handler = () => {
+    throw new Error('Connection unavailable')
+  }
+  await assert.rejects(request('/api/offline'), /couldn’t reach Intertwine/)
+  handler = () => new Response('not JSON', { headers: { 'Content-Type': 'text/plain' } })
+  await assert.rejects(request('/api/unexpected'), /unexpected response/)
+  auth.clearSession()
+})
+test('HTTP client forwards request cancellation signals', async () => {
+  const controller = new AbortController()
+  handler = (call) => {
+    assert.equal(call.signal, controller.signal)
+    return json({ ok: true })
+  }
+  assert.deepEqual(await request('/api/ping', { signal: controller.signal }), { ok: true })
+})
 test('signed-out refresh does not request account or sample data', async () => {
   handler = () => {
     throw new Error('Signed-out home must not contact account APIs')
@@ -383,7 +446,6 @@ test('auth store restores a tab session and owns its persistence', () => {
   }
 })
 after(() => {
-  globalThis.fetch = originalFetch
   assert.equal(dirname(resolve(runtime)), resolve(tmpdir()))
   assert.ok(basename(runtime).startsWith('intertwine-tests-'))
   rmSync(runtime, { recursive: true, force: true })
