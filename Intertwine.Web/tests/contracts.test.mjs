@@ -12,11 +12,14 @@ const runtime = mkdtempSync(join(tmpdir(), 'intertwine-tests-'))
 const files = [
   'models/question',
   'utils/answerRequest',
+  'stores/pinia',
+  'stores/authStore',
   'api/http',
   'api/questionsApi',
   'composables/useIntertwine',
 ]
 const vueUrl = pathToFileURL(resolve('node_modules/vue/dist/vue.runtime.esm-bundler.js')).href
+const piniaUrl = pathToFileURL(resolve('node_modules/pinia/dist/pinia.js')).href
 for (const file of files) {
   const source = readFileSync(resolve(`src/${file}.ts`), 'utf8').replaceAll(
     'import.meta.env',
@@ -28,6 +31,7 @@ for (const file of files) {
   code = code
     .replace(/from ['"](\.[^'"]+)['"]/g, "from '$1.mjs'")
     .replace(/from ['"]vue['"]/g, `from '${vueUrl}'`)
+    .replace(/from ['"]pinia['"]/g, `from '${piniaUrl}'`)
   const destination = join(runtime, `${file}.mjs`)
   mkdirSync(dirname(destination), { recursive: true })
   writeFileSync(destination, code)
@@ -55,6 +59,8 @@ const { useIntertwine } = await import(
   pathToFileURL(join(runtime, 'composables/useIntertwine.mjs'))
 )
 const { request, ApiError } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
+const { useAuthStore } = await import(pathToFileURL(join(runtime, 'stores/authStore.mjs')))
+const { createPinia } = await import('pinia')
 const app = useIntertwine()
 const question = {
   questionId: 7,
@@ -349,6 +355,32 @@ test('paid request includes explicit consent in its body', () => {
     answerId: 70,
     spendSparks: true,
   })
+})
+test('auth store restores a tab session and owns its persistence', () => {
+  const priorToken = sessionStorage.getItem('intertwine.token')
+  const priorUser = sessionStorage.getItem('intertwine.user')
+  try {
+    sessionStorage.setItem('intertwine.token', 'restored-token')
+    sessionStorage.setItem('intertwine.user', 'restored-user')
+    const restored = useAuthStore(createPinia())
+    assert.equal(restored.accessToken, 'restored-token')
+    assert.equal(restored.userId, 'restored-user')
+    assert.equal(restored.signedIn, true)
+
+    restored.setSession('replacement-token', 'replacement-user')
+    assert.equal(sessionStorage.getItem('intertwine.token'), 'replacement-token')
+    assert.equal(restored.userId, 'replacement-user')
+
+    restored.clearSession()
+    assert.equal(restored.signedIn, false)
+    assert.equal(sessionStorage.getItem('intertwine.token'), null)
+    assert.equal(sessionStorage.getItem('intertwine.user'), null)
+  } finally {
+    if (priorToken === null) sessionStorage.removeItem('intertwine.token')
+    else sessionStorage.setItem('intertwine.token', priorToken)
+    if (priorUser === null) sessionStorage.removeItem('intertwine.user')
+    else sessionStorage.setItem('intertwine.user', priorUser)
+  }
 })
 after(() => {
   globalThis.fetch = originalFetch

@@ -1,5 +1,8 @@
 import { computed, ref } from 'vue'
+import { storeToRefs } from 'pinia'
 import { ApiError, request } from '../api/http'
+import { useAuthStore } from '../stores/authStore'
+import { pinia } from '../stores/pinia'
 import {
   getCurrentAnswers,
   getDailyActivity,
@@ -22,7 +25,8 @@ import type {
 } from '../models/question'
 import { localDate } from '../utils/answerRequest'
 
-const signedIn = ref(Boolean(sessionStorage.getItem('intertwine.token')))
+const auth = useAuthStore(pinia)
+const { signedIn } = storeToRefs(auth)
 const profile = ref<Profile | null>(null)
 const profileLoading = ref(false)
 const profileLoaded = ref(false)
@@ -47,7 +51,7 @@ const emptyActivity = () => ({
   answers: {} as Record<number, number>,
 })
 const activity = ref(emptyActivity())
-const canUseAccount = computed(() => signedIn.value)
+const canUseAccount = signedIn
 const displayName = computed(
   () => profile.value?.firstName || (signedIn.value ? 'friend' : 'there'),
 )
@@ -58,9 +62,7 @@ const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
   if (cause instanceof ApiError && cause.status === 401) {
-    sessionStorage.removeItem('intertwine.token')
-    sessionStorage.removeItem('intertwine.user')
-    signedIn.value = false
+    auth.clearSession()
     profile.value = null
     profileLoaded.value = false
     profileError.value = ''
@@ -79,7 +81,7 @@ function reportError(cause: unknown) {
 }
 
 async function loadProfile(force = false) {
-  if (!sessionStorage.getItem('intertwine.token')) {
+  if (!auth.accessToken) {
     profile.value = null
     profileLoaded.value = true
     profileError.value = ''
@@ -227,7 +229,7 @@ async function answer(question: Question, answerId: number, date: string, spendS
     throw new Error('A new day has started. Please reopen the question before answering.')
   }
   const isDaily = question.questionId === daily.value?.questionId
-  const fingerprint = `${sessionStorage.getItem('intertwine.user')}:${question.questionId}:${answerId}:${date}:${spendSparks}`
+  const fingerprint = `${auth.userId ?? ''}:${question.questionId}:${answerId}:${date}:${spendSparks}`
   const key = pendingAnswers.get(fingerprint) ?? crypto.randomUUID()
   pendingAnswers.set(fingerprint, key)
   try {
@@ -270,11 +272,9 @@ async function authenticate(
   if (!result.succeeded) throw new Error(result.error || 'Unable to sign in.')
   if (register) return false
   if (!result.token) throw new Error('No session was returned. Please sign in again.')
-  sessionStorage.setItem('intertwine.token', result.token)
-  sessionStorage.setItem('intertwine.user', result.userId || '')
+  auth.setSession(result.token, result.userId)
   resetState()
   await loadProfile()
-  signedIn.value = true
   authOpen.value = false
   return true
 }
@@ -300,9 +300,7 @@ function resetState() {
   error.value = ''
 }
 async function signOut() {
-  sessionStorage.removeItem('intertwine.token')
-  sessionStorage.removeItem('intertwine.user')
-  signedIn.value = false
+  auth.clearSession()
   resetState()
 }
 async function saveProfile(input: ProfileInput) {

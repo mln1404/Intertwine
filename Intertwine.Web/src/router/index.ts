@@ -5,13 +5,15 @@ import WalletView from '../views/WalletView.vue'
 import PaymentsView from '../views/PaymentsView.vue'
 import UserAnswersView from '../views/UserAnswersView.vue'
 import ProfileView from '../views/ProfileView.vue'
+import { useAuthStore } from '../stores/authStore'
+import { pinia } from '../stores/pinia'
 
-const hasAccessToken = () => Boolean(sessionStorage.getItem('intertwine.token'))
+const isAuthenticated = () => useAuthStore(pinia).signedIn
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: () => (hasAccessToken() ? '/today' : '/login') },
+    { path: '/', redirect: () => (isAuthenticated() ? '/today' : '/login') },
     { path: '/login', name: 'login', component: HomeView },
     {
       path: '/today',
@@ -36,8 +38,8 @@ export const router = createRouter({
 })
 
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth && !hasAccessToken()) {
+  if (to.meta.requiresAuth && !isAuthenticated()) {
     return { name: 'login', query: { redirect: to.fullPath } }
   }
-  if (to.name === 'login' && hasAccessToken()) return { name: 'today' }
+  if (to.name === 'login' && isAuthenticated()) return { name: 'today' }
 })

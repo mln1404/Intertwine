@@ -1,3 +1,6 @@
+import { useAuthStore } from '../stores/authStore'
+import { pinia } from '../stores/pinia'
+
 export class ApiError extends Error {
   status: number
   constructor(message: string, status: number) {
@@ -10,7 +13,7 @@ export async function request<T>(path: string, options: RequestInit = {}): Promi
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')
   if (options.body) headers.set('Content-Type', 'application/json')
-  const token = sessionStorage.getItem('intertwine.token')
+  const token = useAuthStore(pinia).accessToken
   if (token) headers.set('Authorization', `Bearer ${token}`)
   let response: Response
   try {
