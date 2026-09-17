@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import AppIcon from '../components/AppIcon.vue'
 import { useIntertwine } from '../composables/useIntertwine'
 
 const { authenticate, profile, reportError } = useIntertwine()
+const route = useRoute()
+const router = useRouter()
 const register = ref(false)
 const busy = ref(false)
 const error = ref('')
@@ -23,9 +26,14 @@ async function submit() {
   message.value = ''
   try {
     const loggedIn = await authenticate(form, register.value)
-    if (loggedIn && !profile.value) {
-      location.hash = 'profile'
-    } else if (!loggedIn) {
+    if (loggedIn) {
+      const requested = route.query.redirect
+      const destination =
+        typeof requested === 'string' && requested.startsWith('/') && !requested.startsWith('//')
+          ? requested
+          : '/today'
+      await router.replace(!profile.value ? '/profile' : destination)
+    } else {
       register.value = false
       form.password = ''
       message.value = 'Your account and profile are ready. Sign in to continue.'
@@ -41,13 +49,13 @@ async function submit() {
 <template>
   <main class="public-home">
     <section class="public-story">
-      <a class="brand public-brand" href="#" aria-label="Intertwine home">
+      <RouterLink class="brand public-brand" to="/login" aria-label="Intertwine home">
         <AppIcon name="heart" :size="34" />
         <span>
           intertwine
           <span class="brand-dot">.</span>
         </span>
-      </a>
+      </RouterLink>
       <div>
         <p class="eyebrow">A LITTLE CLOSER, EVERY DAY</p>
         <h1>Meaningful connections start with being yourself.</h1>

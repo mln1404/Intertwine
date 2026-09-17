@@ -70,7 +70,7 @@ async function submit() {
         <input v-model="spendSparks" type="checkbox" />
         Spend 10 Sparks on this answer
       </label>
-      <a v-else class="button primary" href="#wallet">Get more Sparks ✨</a>
+      <RouterLink v-else class="button primary" to="/wallet">Get more Sparks ✨</RouterLink>
     </div>
     <p v-if="success || locked" class="inline-message success" role="status">
       <AppIcon name="check" :size="18" />

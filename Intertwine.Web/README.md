@@ -34,7 +34,7 @@ The home-page sign-in form connects to the real API. Successful sign-in loads th
 - **Accounts:** registration, sign-in, sign-out, validation messages, and expired-session handling.
 - Responsive desktop sidebar/mobile bottom navigation, labelled form inputs, native modal focus containment, keyboard navigation, loading/error/empty states, and reduced-motion support.
 
-Hash navigation (`#today`, `#questions`, `#wallet`, `#payments`, `#answers`, `#profile`) supports browser back/forward and static hosting without a route fallback.
+Vue Router uses history-mode paths (`/today`, `/questions`, `/wallet`, `/payments`, `/answers`, `/profile`) for browser back/forward navigation. Configure the production host to serve `index.html` for these frontend paths.
 
 ## API contracts and current backend limits
 
@@ -45,8 +45,8 @@ Hash navigation (`#today`, `#questions`, `#wallet`, `#payments`, `#answers`, `#p
 | Question and answer options | `GET /api/questions/{id}`                              |
 | Answer submission           | `POST /api/questions/{id}/answer?localDate=YYYY-MM-DD` |
 | Authentication              | `POST /api/Auth/register`, `POST /api/Auth/login`      |
-| Profile                     | `GET`, `PUT`, `POST /api/UserProfile/me`                |
-| Deactivate profile          | `POST /api/UserProfile/me/deactivate`                   |
+| Profile                     | `GET`, `PUT`, `POST /api/UserProfile/me`               |
+| Deactivate profile          | `POST /api/UserProfile/me/deactivate`                  |
 | Current answers             | `GET /api/user-answers/me`                             |
 | Daily activity              | `GET /api/daily-activity/me?localDate=YYYY-MM-DD`      |
 | Wallet                      | `GET /api/wallet`                                      |

@@ -55,13 +55,13 @@ onUnmounted(() => pageRequests.abort())
         Your answers
         <span class="muted">({{ currentAnswers.length }})</span>
       </h2>
-      <a class="button secondary" href="#questions">Explore questions</a>
+      <RouterLink class="button secondary" to="/questions">Explore questions</RouterLink>
     </div>
     <div v-if="!currentAnswers.length" class="empty-state">
       <AppIcon name="book" :size="36" />
       <h3>No answered questions yet</h3>
       <p>Your selected answers and their categories will appear here.</p>
-      <a class="button primary" href="#questions">Answer a question</a>
+      <RouterLink class="button primary" to="/questions">Answer a question</RouterLink>
     </div>
     <div v-else class="question-grid">
       <article v-for="answer in currentAnswers" :key="answer.questionId" class="answered-card">
