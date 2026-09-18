@@ -18,7 +18,7 @@ public class TokenServiceTests
             Key = "unit-test-signing-key-with-at-least-32-bytes",
             Issuer = "Intertwine.UnitTests",
             Audience = "Intertwine.Client",
-            AccessTokenExpiryMinutes = 30
+            AccessTokenExpiryMinutes = 17
         };
         var service = new Service(Options.Create(settings));
         var beforeGeneration = DateTime.UtcNow;
@@ -50,7 +50,7 @@ public class TokenServiceTests
         Assert.Equal("person@example.com", principal.FindFirstValue(ClaimTypes.Name));
         Assert.InRange(
             validatedToken.ValidTo,
-            beforeGeneration.AddMinutes(30).AddSeconds(-2),
-            beforeGeneration.AddMinutes(30).AddSeconds(2));
+            beforeGeneration.AddMinutes(settings.AccessTokenExpiryMinutes).AddSeconds(-2),
+            beforeGeneration.AddMinutes(settings.AccessTokenExpiryMinutes).AddSeconds(2));
     }
 }

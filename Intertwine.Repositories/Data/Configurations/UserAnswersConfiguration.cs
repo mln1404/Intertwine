@@ -12,6 +12,8 @@ namespace Intertwine.Repositories.Data.Configurations
         public void Configure(EntityTypeBuilder<UserAnswers> builder)
         {
             builder.HasKey(ua => ua.UserAnswerId);
+            builder.ToTable("UserAnswers", tb => tb.UseSqlOutputClause(false));
+
             // Reject overlapping updates to an answer already changed by another submission.
             builder.Property(ua => ua.AnswerId).IsConcurrencyToken();
 

@@ -6,6 +6,7 @@ using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Moq;
+using Microsoft.Extensions.Options;
 using Service = Intertwine.Services.Services.AuthService;
 
 namespace Intertwine.UnitTests.Services.AuthService;
@@ -129,6 +130,9 @@ public class AuthServiceTests
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
         tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
+        tokenService.Setup(x => x.GenerateRefreshToken()).Returns("raw-refresh-token");
+        tokenService.Setup(x => x.HashRefreshToken("raw-refresh-token"))
+            .Returns("hashed-refresh-token");
         var service = CreateService(userManager, tokenService);
 
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -136,6 +140,7 @@ public class AuthServiceTests
         Assert.True(result.Succeeded);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal("signed-token", result.Token);
+        Assert.Equal("raw-refresh-token", result.RefreshToken);
     }
 
     [Fact]
@@ -157,6 +162,9 @@ public class AuthServiceTests
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
         tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
+        tokenService.Setup(x => x.GenerateRefreshToken()).Returns("raw-refresh-token");
+        tokenService.Setup(x => x.HashRefreshToken("raw-refresh-token"))
+            .Returns("hashed-refresh-token");
         var service = CreateService(userManager, tokenService, profiles);
 
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -164,6 +172,7 @@ public class AuthServiceTests
         Assert.True(result.Succeeded);
         Assert.True(profile.IsActive);
         profiles.Verify(x => x.SetIsActiveAsync(profile, true, user.Id), Times.Once);
+        Assert.Equal("raw-refresh-token", result.RefreshToken);
     }
 
     private static RegisterRequest CreateRegisterRequest() => new()
@@ -200,12 +209,26 @@ public class AuthServiceTests
     private static Service CreateService(
         Mock<UserManager<ApplicationUser>> userManager,
         Mock<ITokenService>? tokenService = null,
-        Mock<IUserProfileRepository>? userProfileRepository = null)
+        Mock<IUserProfileRepository>? userProfileRepository = null,
+        Mock<IRefreshTokenRepository>? refreshTokenRepository = null,
+        Mock<IUnitOfWork>? unitOfWork = null,
+        JwtSettings? jwtSettings = null)
     {
+        var refreshRepo = (refreshTokenRepository ?? new Mock<IRefreshTokenRepository>()).Object;
+
+        var uowMock = unitOfWork ?? new Mock<IUnitOfWork>();
+        uowMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
+        var options = Options.Create(jwtSettings ?? new JwtSettings { RefreshTokenExpiryDays = 7 });
+
         return new Service(
             userManager.Object,
             (userProfileRepository ?? new Mock<IUserProfileRepository>()).Object,
-            (tokenService ?? new Mock<ITokenService>()).Object);
+            (tokenService ?? new Mock<ITokenService>()).Object,
+            refreshRepo,
+            uowMock.Object,
+            options);
     }
 
     private static Mock<UserManager<ApplicationUser>> CreateUserManager()
