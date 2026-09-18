@@ -130,6 +130,9 @@ public class AuthServiceTests
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
         tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
+        tokenService.Setup(x => x.GenerateRefreshToken()).Returns("raw-refresh-token");
+        tokenService.Setup(x => x.HashRefreshToken("raw-refresh-token"))
+            .Returns("hashed-refresh-token");
         var service = CreateService(userManager, tokenService);
 
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -137,6 +140,7 @@ public class AuthServiceTests
         Assert.True(result.Succeeded);
         Assert.Equal(user.Id, result.UserId);
         Assert.Equal("signed-token", result.Token);
+        Assert.Equal("raw-refresh-token", result.RefreshToken);
     }
 
     [Fact]
@@ -158,6 +162,9 @@ public class AuthServiceTests
         var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
         tokenService.Setup(x => x.GenerateAccessToken(user.Id, user.Email!))
             .Returns("signed-token");
+        tokenService.Setup(x => x.GenerateRefreshToken()).Returns("raw-refresh-token");
+        tokenService.Setup(x => x.HashRefreshToken("raw-refresh-token"))
+            .Returns("hashed-refresh-token");
         var service = CreateService(userManager, tokenService, profiles);
 
         var result = await service.LoginAsync(CreateLoginRequest());
@@ -165,6 +172,7 @@ public class AuthServiceTests
         Assert.True(result.Succeeded);
         Assert.True(profile.IsActive);
         profiles.Verify(x => x.SetIsActiveAsync(profile, true, user.Id), Times.Once);
+        Assert.Equal("raw-refresh-token", result.RefreshToken);
     }
 
     private static RegisterRequest CreateRegisterRequest() => new()
