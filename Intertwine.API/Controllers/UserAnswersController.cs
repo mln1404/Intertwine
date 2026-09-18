@@ -21,6 +21,7 @@ public class UserAnswersController : ControllerBase
     }
 
     [HttpGet("me")]
+    /// <summary>Gets the caller's current answer selection for every answered question.</summary>
     public async Task<IActionResult> GetMe(
         CancellationToken cancellationToken)
     {

@@ -17,6 +17,7 @@ public class UserProfileRepository : IUserProfileRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<UserProfile?> GetByIdAsync(int userProfileId)
     {
         return await ActiveProfiles()
@@ -26,6 +27,7 @@ public class UserProfileRepository : IUserProfileRepository
             .FirstOrDefaultAsync(x => x.UserProfileId == userProfileId);
     }
 
+    /// <inheritdoc />
     public async Task<UserProfile?> GetByIdentityUserIdAsync(
         string identityUserId)
     {
@@ -35,6 +37,7 @@ public class UserProfileRepository : IUserProfileRepository
                 x => x.IdentityUserId == identityUserId);
     }
 
+    /// <inheritdoc />
     public async Task<UserProfile?> GetByIdentityUserIdIncludingInactiveAsync(
         string identityUserId)
     {
@@ -44,6 +47,7 @@ public class UserProfileRepository : IUserProfileRepository
                 x => x.IdentityUserId == identityUserId);
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<UserProfile>> GetAllAsync()
     {
         return await ActiveProfiles()
@@ -53,6 +57,7 @@ public class UserProfileRepository : IUserProfileRepository
             .ToListAsync();
     }
 
+    /// <inheritdoc />
     public async Task<UserProfile> AddAsync(UserProfile userProfile)
     {
         await _context.UserProfiles.AddAsync(userProfile);
@@ -61,12 +66,14 @@ public class UserProfileRepository : IUserProfileRepository
         return userProfile;
     }
 
+    /// <inheritdoc />
     public async Task UpdateAsync(UserProfile userProfile)
     {
         _context.UserProfiles.Update(userProfile);
         await _context.SaveChangesAsync();
     }
 
+    /// <inheritdoc />
     public async Task SetIsActiveAsync(
         UserProfile userProfile,
         bool isActive,

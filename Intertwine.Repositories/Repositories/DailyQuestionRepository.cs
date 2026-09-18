@@ -7,11 +7,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// EF Core repository for Daily Question assignment queries and inserts.
+/// </summary>
 public sealed class DailyQuestionRepository(IntertwineDbContext context) : IDailyQuestionRepository
 {
+    /// <inheritdoc />
     public Task<bool> ExistsAsync(DateOnly date, CancellationToken cancellationToken = default) =>
         context.DailyQuestions.AnyAsync(q => q.Date == date, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<DailyQuestionSelection> GetSelectionAsync(CancellationToken cancellationToken = default)
     {
         var questions = await context.Questions.AsNoTracking()
@@ -39,6 +44,7 @@ public sealed class DailyQuestionRepository(IntertwineDbContext context) : IDail
             usage);
     }
 
+    /// <inheritdoc />
     public async Task<bool> TryInsertAsync(DailyQuestion assignment, CancellationToken cancellationToken = default)
     {
         context.DailyQuestions.Add(assignment);

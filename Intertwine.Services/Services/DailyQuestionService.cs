@@ -10,6 +10,7 @@ public sealed class DailyQuestionService(
     IDailyQuestionRepository repository,
     TimeProvider timeProvider) : IDailyQuestionService
 {
+    /// <inheritdoc />
     public async Task<EnsureDailyQuestionsResult> EnsureDailyQuestionsAsync(
         DateOnly startDate,
         int daysAhead = 7,

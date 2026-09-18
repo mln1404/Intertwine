@@ -1,10 +1,13 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures the one-to-one relationship between an identity account and profile.
+/// </summary>
 public class ApplicationUserConfiguration
     : IEntityTypeConfiguration<ApplicationUser>
 {

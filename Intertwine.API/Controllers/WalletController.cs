@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using Intertwine.Services.DTOs.Wallets;
 using Intertwine.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
@@ -9,6 +9,9 @@ namespace Intertwine.API.Controllers;
 [ApiController]
 [Route("api/wallet")]
 [Authorize]
+/// <summary>
+/// Exposes the authenticated user's Spark balance, demo top-up, and payment history.
+/// </summary>
 public class WalletController : ControllerBase
 {
     private readonly IWalletService _walletService;
@@ -20,6 +23,7 @@ public class WalletController : ControllerBase
     }
 
     [HttpGet]
+    /// <summary>Gets the caller's current Spark balance.</summary>
     public async Task<IActionResult> GetWallet(
         CancellationToken cancellationToken)
     {
@@ -40,6 +44,7 @@ public class WalletController : ControllerBase
     }
 
     [HttpPost("top-up")]
+    /// <summary>Completes the current demo top-up for a selected credit package.</summary>
     public async Task<IActionResult> TopUp(
         [FromBody] TopUpRequest request,
         CancellationToken cancellationToken)
@@ -62,6 +67,7 @@ public class WalletController : ControllerBase
     }
 
     [HttpGet("payments")]
+    /// <summary>Gets a page of the caller's payment history.</summary>
     public async Task<IActionResult> GetPayments([FromQuery] int page = 1, CancellationToken cancellationToken = default)
     {
         var identityUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);

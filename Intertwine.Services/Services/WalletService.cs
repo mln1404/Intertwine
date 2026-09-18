@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Domain.Enums;
 using Intertwine.Services.DTOs.Wallets;
 using Intertwine.Services.Interfaces;
@@ -6,6 +6,9 @@ using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Coordinates wallet balances, demo top-ups, payments, and financial ledger entries.
+/// </summary>
 public class WalletService : IWalletService
 {
     private readonly IUserProfileRepository _userProfileRepository;
@@ -33,6 +36,7 @@ public class WalletService : IWalletService
         _unitOfWork = unitOfWork;
     }
 
+    /// <inheritdoc />
     public async Task<WalletDto> GetWalletAsync(
         string identityUserId,
         CancellationToken cancellationToken = default)
@@ -51,6 +55,7 @@ public class WalletService : IWalletService
         };
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<PaymentHistoryDto>> GetPaymentsAsync(string identityUserId, int page = 1,
         CancellationToken cancellationToken = default)
     {
@@ -64,6 +69,7 @@ public class WalletService : IWalletService
             SparksPurchased = x.CreditsPurchased, Status = x.Status.ToString(), PaymentProvider = x.PaymentProvider
         }).ToList();
     }
+    /// <inheritdoc />
     public async Task<TopUpResultDto> TopUpAsync(
     string identityUserId,
     TopUpRequest request,

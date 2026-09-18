@@ -306,6 +306,60 @@ test('ambiguous answer failures retain one idempotency key across retries', asyn
   assert.equal(new Set(keys).size, 1)
   assert.equal(submissions[0].body, '{"answerId":70}')
   assert.ok(submissions[0].path.endsWith(`?localDate=${localDate()}`))
+  assert.equal(calls.some((call) => call.path === '/api/wallet'), false)
+})
+test('successful paid answer refetches and displays the authoritative wallet balance', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('test-token', 'test-user')
+  app.profile.value = { ...profile }
+  app.balance.value = 45
+  calls.length = 0
+  handler = (call) => {
+    if (call.path === '/api/wallet') return json({ creditBalance: 35 })
+    if (call.method === 'POST' && call.path.startsWith('/api/questions/8/answer'))
+      return json({ message: 'Answer submitted successfully.' })
+    return standard(call)
+  }
+  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+
+  assert.equal(await app.answer(paidQuestion, 80, localDate(), true), true)
+
+  const submissionIndex = calls.findIndex((call) => call.path.startsWith('/api/questions/8/answer'))
+  const walletIndex = calls.findIndex((call) => call.path === '/api/wallet')
+  assert.ok(submissionIndex >= 0 && walletIndex > submissionIndex)
+  assert.equal(calls.filter((call) => call.path === '/api/wallet').length, 1)
+  assert.equal(JSON.parse(calls[submissionIndex].body).spendSparks, true)
+  assert.ok(calls[submissionIndex].headers.get('Idempotency-Key'))
+  assert.equal(app.balance.value, 35)
+  assert.equal(app.profile.value.creditBalance, 35)
+})
+test('failed paid answer does not refetch or locally deduct Sparks', async () => {
+  app.balance.value = 45
+  calls.length = 0
+  handler = (call) =>
+    call.method === 'POST' ? json({ message: 'Daily limit reached.' }, 400) : standard(call)
+  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+
+  await assert.rejects(app.answer(paidQuestion, 80, localDate(), true), /Daily limit reached/)
+
+  assert.equal(calls.some((call) => call.path === '/api/wallet'), false)
+  assert.equal(app.balance.value, 45)
+})
+test('wallet refetch failure does not turn a saved paid answer into a failed submission', async () => {
+  app.balance.value = 45
+  calls.length = 0
+  handler = (call) => {
+    if (call.path === '/api/wallet') return json({}, 503)
+    if (call.method === 'POST' && call.path.startsWith('/api/questions/8/answer'))
+      return json({ message: 'Answer submitted successfully.' })
+    return standard(call)
+  }
+  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+
+  assert.equal(await app.answer(paidQuestion, 80, localDate(), true), true)
+
+  assert.equal(app.balance.value, 45)
+  assert.match(app.error.value, /answer was saved.*couldn’t refresh your Spark balance/)
 })
 test('server limit messages are shown without incrementing local activity', async () => {
   handler = () => json({ message: 'Daily limit reached.' }, 400)

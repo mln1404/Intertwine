@@ -4,6 +4,9 @@ using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Maps active currencies to API response data.
+/// </summary>
 public class CurrencyService : ICurrencyService
 {
     private readonly ICurrencyRepository _currencyRepository;
@@ -13,6 +16,7 @@ public class CurrencyService : ICurrencyService
         _currencyRepository = currencyRepository;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<CurrencyDto>> GetActiveAsync(
         CancellationToken cancellationToken = default)
     {

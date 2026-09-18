@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,7 @@ public class UserAnswerRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<UserAnswers>> GetByUserProfileIdAsync(
         int userProfileId,
         CancellationToken cancellationToken = default)
@@ -34,6 +35,7 @@ public class UserAnswerRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<UserAnswers?> GetByUserAndQuestionAsync(
         int userProfileId,
         int questionId,
@@ -48,6 +50,7 @@ public class UserAnswerRepository
                 cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<UserAnswers> AddAsync(
         UserAnswers userAnswer,
         CancellationToken cancellationToken = default)

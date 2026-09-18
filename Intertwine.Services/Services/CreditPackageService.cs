@@ -1,9 +1,12 @@
-﻿using Intertwine.Services.DTOs.CreditPackages;
+using Intertwine.Services.DTOs.CreditPackages;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Maps active credit packages to API response data.
+/// </summary>
 public class CreditPackageService : ICreditPackageService
 {
     private readonly ICreditPackageRepository
@@ -15,6 +18,7 @@ public class CreditPackageService : ICreditPackageService
         _creditPackageRepository = creditPackageRepository;
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<CreditPackageDto>> GetActiveAsync(
         string currencyCode,
         CancellationToken cancellationToken = default)

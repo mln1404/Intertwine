@@ -1,9 +1,12 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures the one-wallet-per-profile rule, optimistic concurrency, and non-negative balance.
+/// </summary>
 public class UserWalletConfiguration
     : IEntityTypeConfiguration<UserWallet>
 {

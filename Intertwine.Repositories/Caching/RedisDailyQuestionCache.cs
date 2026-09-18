@@ -26,6 +26,7 @@ public class RedisDailyQuestionCache : IDailyQuestionCache
         _logger = logger;
     }
 
+    /// <inheritdoc />
     public async Task<QuestionDetailDto?> GetAsync(
         DateOnly localDate,
         CancellationToken cancellationToken = default)
@@ -52,6 +53,7 @@ public class RedisDailyQuestionCache : IDailyQuestionCache
         }
     }
 
+    /// <inheritdoc />
     public async Task SetAsync(
         DateOnly localDate,
         QuestionDetailDto question,
@@ -79,6 +81,7 @@ public class RedisDailyQuestionCache : IDailyQuestionCache
         }
     }
 
+    /// <inheritdoc />
     public async Task RemoveAsync(
         DateOnly localDate,
         CancellationToken cancellationToken = default)

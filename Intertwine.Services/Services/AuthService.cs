@@ -10,7 +10,7 @@ using Microsoft.Extensions.Options;
 namespace Intertwine.Services.Services;
 
 /// <summary>
-/// Handles identity registration and credential validation.
+/// Handles registration, login, refresh-token rotation, and logout for identity accounts.
 /// </summary>
 public class AuthService : IAuthService
 {
@@ -37,6 +37,7 @@ public class AuthService : IAuthService
         _jwtSettings = jwtOptions.Value;
     }
 
+    /// <inheritdoc />
     public async Task<AuthResult> LoginAsync(LoginRequest request)
     {
         var user = await _userManager.FindByEmailAsync(request.Email);
@@ -98,6 +99,7 @@ public class AuthService : IAuthService
             RefreshTokenExpiresAtUtc = refreshTokenExpiresAtUtc
         };
     }
+    /// <inheritdoc />
     public async Task<AuthResult> RefreshAsync(string refreshToken)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
@@ -165,6 +167,7 @@ public class AuthService : IAuthService
         };
     }
 
+    /// <inheritdoc />
     public async Task LogoutAsync(string? refreshToken)
     {
         if (string.IsNullOrWhiteSpace(refreshToken))
@@ -179,6 +182,7 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync();
     }
 
+    /// <inheritdoc />
     public async Task<AuthResult> RegisterAsync(
         RegisterRequest request)
     {

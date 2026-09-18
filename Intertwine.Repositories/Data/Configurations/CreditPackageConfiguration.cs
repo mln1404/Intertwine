@@ -1,9 +1,12 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures persisted credit packages and their currency relationship.
+/// </summary>
 public class CreditPackageConfiguration
     : IEntityTypeConfiguration<CreditPackage>
 {

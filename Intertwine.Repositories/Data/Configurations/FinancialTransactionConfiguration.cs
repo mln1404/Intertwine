@@ -1,9 +1,12 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures wallet ledger entry persistence and its relationships.
+/// </summary>
 public class FinancialTransactionConfiguration
     : IEntityTypeConfiguration<FinancialTransaction>
 {

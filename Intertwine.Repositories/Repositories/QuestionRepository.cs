@@ -17,6 +17,7 @@ public class QuestionRepository : IQuestionRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<Question>> GetAllActiveAsync(
         CancellationToken cancellationToken = default)
     {
@@ -29,6 +30,7 @@ public class QuestionRepository : IQuestionRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<Question>> GetByCategoryAsync(
         int categoryId,
         CancellationToken cancellationToken = default)
@@ -45,6 +47,7 @@ public class QuestionRepository : IQuestionRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Question?> GetByIdWithAnswersAsync(
         int questionId,
         CancellationToken cancellationToken = default)
@@ -61,6 +64,7 @@ public class QuestionRepository : IQuestionRepository
                 cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Question?> GetDailyQuestionByDateAsync(
         DateOnly localDate,
         CancellationToken cancellationToken = default)
@@ -76,6 +80,7 @@ public class QuestionRepository : IQuestionRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<bool> IsDailyQuestionAsync(
         int questionId,
         DateOnly date,
@@ -89,6 +94,7 @@ public class QuestionRepository : IQuestionRepository
                 cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<bool> AnswerBelongsToQuestionAsync(
         int answerId,
         int questionId,

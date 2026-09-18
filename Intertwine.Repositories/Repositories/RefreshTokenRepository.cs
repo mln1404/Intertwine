@@ -3,6 +3,9 @@ using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
+/// <summary>
+/// EF Core repository for hashed refresh-token records.
+/// </summary>
 public class RefreshTokenRepository
     : IRefreshTokenRepository
 {
@@ -14,6 +17,7 @@ public class RefreshTokenRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task AddAsync(
         RefreshToken refreshToken,
         CancellationToken cancellationToken = default)
@@ -23,6 +27,7 @@ public class RefreshTokenRepository
             cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<RefreshToken?> GetByHashAsync(
         string tokenHash,
         CancellationToken cancellationToken = default)

@@ -1,10 +1,13 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// EF Core repository for credit packages.
+/// </summary>
 public class CreditPackageRepository
     : ICreditPackageRepository
 {
@@ -16,6 +19,7 @@ public class CreditPackageRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<CreditPackage>>
     GetActiveByCurrencyAsync(
         string currencyCode,
@@ -31,6 +35,7 @@ public class CreditPackageRepository
             .ToListAsync(cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<CreditPackage?> GetByIdAsync(
         int creditPackageId,
         CancellationToken cancellationToken = default)

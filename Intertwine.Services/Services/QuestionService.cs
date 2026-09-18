@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Services.DTOs.Answers;
 using Intertwine.Services.DTOs.Categories;
 using Intertwine.Services.DTOs.Questions;
@@ -8,7 +8,7 @@ using Intertwine.Services.Interfaces.Repositories;
 namespace Intertwine.Services.Services.Questions;
 
 /// <summary>
-/// Retrieves question data for API consumers.
+/// Retrieves question data and applies Daily Question cache-aside behavior.
 /// </summary>
 public class QuestionService : IQuestionService
 {
@@ -23,6 +23,7 @@ public class QuestionService : IQuestionService
         _dailyQuestionCache = dailyQuestionCache;
     }
 
+    /// <inheritdoc />
     public async Task<IEnumerable<QuestionListDto>> GetQuestionsAsync(
         int? categoryId = null,
         CancellationToken cancellationToken = default)
@@ -37,6 +38,7 @@ public class QuestionService : IQuestionService
         return questions.Select(MapToListDto);
     }
 
+    /// <inheritdoc />
     public async Task<QuestionDetailDto?> GetQuestionByIdAsync(
         int questionId,
         CancellationToken cancellationToken = default)
@@ -52,6 +54,7 @@ public class QuestionService : IQuestionService
         return MapToDetailDto(question);
     }
 
+    /// <inheritdoc />
     public async Task<QuestionDetailDto?> GetDailyQuestionAsync(
         DateOnly localDate,
         CancellationToken cancellationToken = default)

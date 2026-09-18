@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations
 {
+    /// <summary>
+    /// Configures the question-to-category join table.
+    /// </summary>
     public class QuestionCategoriesConfiguration : IEntityTypeConfiguration<QuestionCategories>
     {
         public void Configure(EntityTypeBuilder<QuestionCategories> builder)

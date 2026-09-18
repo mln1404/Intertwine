@@ -7,6 +7,9 @@ namespace Intertwine.API.Controllers;
 [ApiController]
 [Route("api/currencies")]
 [Authorize]
+/// <summary>
+/// Exposes currencies available for Spark packages.
+/// </summary>
 public class CurrenciesController : ControllerBase
 {
     private readonly ICurrencyService _currencyService;
@@ -17,6 +20,7 @@ public class CurrenciesController : ControllerBase
     }
 
     [HttpGet]
+    /// <summary>Gets active currencies.</summary>
     public async Task<IActionResult> GetCurrencies(
         CancellationToken cancellationToken)
     {

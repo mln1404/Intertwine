@@ -1,4 +1,4 @@
-﻿using Intertwine.Repositories.Data;
+using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
 
@@ -16,6 +16,7 @@ public class UnitOfWork : IUnitOfWork
         _context = context;
     }
 
+    /// <inheritdoc />
     /// <inheritdoc />
     public async Task<int> SaveChangesAsync(
         CancellationToken cancellationToken = default)

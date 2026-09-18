@@ -10,7 +10,7 @@ using System.Text;
 namespace Intertwine.Services.Services;
 
 /// <summary>
-/// Creates signed JSON Web Tokens for authenticated users.
+/// Generates signed JWTs, opaque refresh tokens, and refresh-token hashes.
 /// </summary>
 public class TokenService : ITokenService
 {
@@ -21,6 +21,7 @@ public class TokenService : ITokenService
         _settings = options.Value;
     }
 
+    /// <inheritdoc />
     public string GenerateAccessToken(string userId, string userName)
     {
         var keyBytes = Encoding.UTF8.GetBytes(_settings.Key);
@@ -48,6 +49,7 @@ public class TokenService : ITokenService
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
+    /// <inheritdoc />
     public string GenerateRefreshToken()
     {
         var randomBytes = RandomNumberGenerator.GetBytes(64);
@@ -55,6 +57,7 @@ public class TokenService : ITokenService
         return Convert.ToBase64String(randomBytes);
     }
 
+    /// <inheritdoc />
     public string HashRefreshToken(string refreshToken)
     {
         var tokenBytes = Encoding.UTF8.GetBytes(refreshToken);

@@ -22,6 +22,7 @@ public class DailyActivityController : ControllerBase
     }
 
     [HttpGet("me")]
+    /// <summary>Gets the caller's answer allowance and Daily Question state for a local date.</summary>
     public async Task<IActionResult> GetMe(
         [FromQuery] DateOnly localDate,
         CancellationToken cancellationToken)

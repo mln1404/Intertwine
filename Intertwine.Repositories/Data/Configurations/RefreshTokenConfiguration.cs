@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures hashed refresh-token persistence and lookup constraints.
+/// </summary>
 public class RefreshTokenConfiguration
     : IEntityTypeConfiguration<RefreshToken>
 {

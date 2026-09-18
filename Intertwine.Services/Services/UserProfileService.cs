@@ -5,6 +5,9 @@ using Intertwine.Services.Interfaces.Repositories;
 
 namespace Intertwine.Services.Services;
 
+/// <summary>
+/// Manages creation, retrieval, editing, and deactivation of application profiles.
+/// </summary>
 public class UserProfileService : IUserProfileService
 {
     private readonly IUserProfileRepository _userProfileRepository;
@@ -15,6 +18,7 @@ public class UserProfileService : IUserProfileService
         _userProfileRepository = userProfileRepository;
     }
 
+    /// <inheritdoc />
     public async Task<UserProfileDto?> CreateCurrentUserAsync(
         string identityUserId,
         CreateUserProfileRequest request)
@@ -47,6 +51,7 @@ public class UserProfileService : IUserProfileService
         return MapToDto(userProfile);
     }
 
+    /// <inheritdoc />
     public async Task<UserProfileDto?> GetCurrentUserProfileAsync(
         string identityUserId)
     {
@@ -59,6 +64,7 @@ public class UserProfileService : IUserProfileService
         return MapToDto(userProfile);
     }
 
+    /// <inheritdoc />
     public async Task<UserProfileDto?> UpdateCurrentUserAsync(
         string identityUserId,
         UpdateUserProfileRequest request)
@@ -79,6 +85,7 @@ public class UserProfileService : IUserProfileService
         return MapToDto(userProfile);
     }
 
+    /// <inheritdoc />
     public async Task<bool> DeactivateCurrentUserAsync(
         string identityUserId)
     {

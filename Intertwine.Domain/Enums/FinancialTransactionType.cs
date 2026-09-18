@@ -1,5 +1,8 @@
 namespace Intertwine.Domain.Enums;
 
+/// <summary>
+/// Identifies whether a financial ledger entry adds or spends Sparks.
+/// </summary>
 public enum FinancialTransactionType
 {
     CreditPurchase = 1,

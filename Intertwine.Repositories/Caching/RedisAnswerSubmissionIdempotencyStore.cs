@@ -24,6 +24,7 @@ public class RedisAnswerSubmissionIdempotencyStore
     }
 
     /// <inheritdoc />
+    /// <inheritdoc />
     public async Task<AnswerSubmissionIdempotencyStatus> TryAcquireAsync(
         string identityUserId,
         string idempotencyKey,
@@ -62,6 +63,7 @@ public class RedisAnswerSubmissionIdempotencyStore
     }
 
     /// <inheritdoc />
+    /// <inheritdoc />
     public async Task CompleteAsync(
         string identityUserId,
         string idempotencyKey,
@@ -82,6 +84,7 @@ public class RedisAnswerSubmissionIdempotencyStore
                 CompletedLifetime);
     }
 
+    /// <inheritdoc />
     /// <inheritdoc />
     public async Task ReleaseAsync(
         string identityUserId,

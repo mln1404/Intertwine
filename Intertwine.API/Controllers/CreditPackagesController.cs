@@ -1,4 +1,4 @@
-﻿using Intertwine.Services.Interfaces;
+using Intertwine.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -7,6 +7,9 @@ namespace Intertwine.API.Controllers;
 [ApiController]
 [Route("api/credit-packages")]
 [Authorize]
+/// <summary>
+/// Exposes active Spark packages for an authenticated user.
+/// </summary>
 public class CreditPackagesController : ControllerBase
 {
     private readonly ICreditPackageService
@@ -19,6 +22,7 @@ public class CreditPackagesController : ControllerBase
     }
 
     [HttpGet]
+    /// <summary>Gets active packages priced in a requested currency.</summary>
     public async Task<IActionResult> GetCreditPackages(
         [FromQuery] string currencyCode,
         CancellationToken cancellationToken)

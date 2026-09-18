@@ -22,6 +22,7 @@ public class UserDailyActivityService : IUserDailyActivityService
         _activityRepository = activityRepository;
     }
 
+    /// <inheritdoc />
     public async Task<UserDailyActivityDto> GetCurrentUserActivityAsync(
         string identityUserId,
         DateOnly localDate,

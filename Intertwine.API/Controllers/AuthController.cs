@@ -53,6 +53,9 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("refresh")]
+    /// <summary>
+    /// Rotates the refresh token in the caller's HttpOnly cookie and returns a new access token.
+    /// </summary>
     public async Task<IActionResult> Refresh()
     {
         if (!Request.Cookies.TryGetValue(
@@ -87,6 +90,9 @@ public class AuthController : ControllerBase
     [HttpPost("logout")]
     [AllowAnonymous]
     [DisableRateLimiting]
+    /// <summary>
+    /// Revokes the refresh token represented by the caller's cookie and expires that cookie.
+    /// </summary>
     public async Task<IActionResult> Logout()
     {
         Request.Cookies.TryGetValue(

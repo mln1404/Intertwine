@@ -1,5 +1,8 @@
 namespace Intertwine.Domain.Enums;
 
+/// <summary>
+/// Represents the processing state of a user payment.
+/// </summary>
 public enum PaymentStatus
 {
     Pending = 1,

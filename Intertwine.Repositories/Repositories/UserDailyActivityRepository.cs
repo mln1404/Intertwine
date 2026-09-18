@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Intertwine.Repositories.Data;
 using Intertwine.Services.Interfaces.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,7 @@ public class UserDailyActivityRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<UserDailyActivity?> GetByUserAndDateAsync(
         int userProfileId,
         DateOnly date,
@@ -32,6 +33,7 @@ public class UserDailyActivityRepository
                 cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<UserDailyActivity> AddAsync(
         UserDailyActivity activity,
         CancellationToken cancellationToken = default)

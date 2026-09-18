@@ -242,6 +242,16 @@ async function answer(question: Question, answerId: number, date: string, spendS
       pendingAnswers.delete(fingerprint)
     throw new Error(reportError(cause))
   }
+  let balanceRefreshFailed = false
+  if (spendSparks && !isDaily) {
+    try {
+      const wallet = await request<{ creditBalance: number }>('/api/wallet')
+      balance.value = wallet.creditBalance
+      if (profile.value) profile.value.creditBalance = wallet.creditBalance
+    } catch {
+      balanceRefreshFailed = true
+    }
+  }
   currentAnswers.value = [
     ...currentAnswers.value.filter((x) => x.questionId !== question.questionId),
     {
@@ -260,6 +270,8 @@ async function answer(question: Question, answerId: number, date: string, spendS
     activity.value.remaining = Math.max(0, activity.value.remaining - 1)
   }
   await refresh()
+  if (balanceRefreshFailed && signedIn.value)
+    error.value = 'Your answer was saved, but we couldn’t refresh your Spark balance. Check your wallet.'
   return true
 }
 async function authenticate(

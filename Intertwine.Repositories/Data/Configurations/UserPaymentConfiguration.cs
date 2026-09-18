@@ -1,9 +1,12 @@
-﻿using Intertwine.Domain.Entities;
+using Intertwine.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Intertwine.Repositories.Data.Configurations;
 
+/// <summary>
+/// Configures payment records stored as top-up snapshots.
+/// </summary>
 public class UserPaymentConfiguration
     : IEntityTypeConfiguration<UserPayment>
 {

@@ -1,4 +1,4 @@
-﻿using Intertwine.Domain.Abstractions;
+using Intertwine.Domain.Abstractions;
 using Intertwine.Domain.Entities;
 using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.UserAnswers;
@@ -39,6 +39,7 @@ namespace Intertwine.Services.Services
         }
 
         /// <inheritdoc />
+        /// <inheritdoc />
         public async Task<IReadOnlyList<UserAnswerSelectionDto>> GetCurrentAnswersAsync(
             string identityUserId,
             CancellationToken cancellationToken = default)
@@ -69,6 +70,7 @@ namespace Intertwine.Services.Services
                 .ToList();
         }
 
+        /// <inheritdoc />
         /// <inheritdoc />
         public async Task SubmitAnswerAsync(
             string identityUserId,

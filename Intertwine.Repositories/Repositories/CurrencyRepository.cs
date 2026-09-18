@@ -4,6 +4,9 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intertwine.Repositories.Repositories;
 
+/// <summary>
+/// EF Core repository for active currencies.
+/// </summary>
 public class CurrencyRepository : ICurrencyRepository
 {
     private readonly IntertwineDbContext _context;
@@ -13,6 +16,7 @@ public class CurrencyRepository : ICurrencyRepository
         _context = context;
     }
 
+    /// <inheritdoc />
     public async Task<IReadOnlyList<Currency>> GetActiveAsync(
         CancellationToken cancellationToken = default)
     {
