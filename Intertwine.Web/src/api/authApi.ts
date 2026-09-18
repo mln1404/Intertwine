@@ -12,3 +12,7 @@ export async function refreshSession(): Promise<AuthResult> {
   const response = await refreshClient.post<AuthResult>('/api/Auth/refresh')
   return response.data
 }
+
+export async function requestLogout(): Promise<void> {
+  await refreshClient.post('/api/Auth/logout')
+}

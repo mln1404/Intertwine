@@ -1,6 +1,7 @@
 using Intertwine.Services.DTOs.Authentication;
 using Intertwine.API.Constants;
 using Intertwine.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
@@ -81,6 +82,35 @@ public class AuthController : ControllerBase
             });
 
         return Ok(result);
+    }
+
+    [HttpPost("logout")]
+    [AllowAnonymous]
+    [DisableRateLimiting]
+    public async Task<IActionResult> Logout()
+    {
+        Request.Cookies.TryGetValue(
+            AuthConstants.RefreshTokenCookieName,
+            out var refreshToken);
+
+        try
+        {
+            await _authService.LogoutAsync(refreshToken);
+        }
+        finally
+        {
+            Response.Cookies.Delete(
+                AuthConstants.RefreshTokenCookieName,
+                new CookieOptions
+                {
+                    Path = "/",
+                    HttpOnly = true,
+                    Secure = true,
+                    SameSite = SameSiteMode.Strict
+                });
+        }
+
+        return NoContent();
     }
 
     [HttpPost("register")]

@@ -123,6 +123,7 @@ const credentials = {
 function standard(call) {
   if (call.path === '/api/Auth/login')
     return json({ succeeded: true, token: 'test-token', userId: 'test-user' })
+  if (call.path === '/api/Auth/logout') return new Response(null, { status: 204 })
   if (call.path.startsWith('/api/questions/daily')) return json(question)
   if (call.path === '/api/questions') return json([{ ...question, answers: undefined }])
   if (call.path === '/api/UserProfile/me') return json(profile)
@@ -208,6 +209,7 @@ test('legacy account can create its missing profile without loading profile-depe
   handler = (call) => {
     if (call.path === '/api/Auth/login')
       return json({ succeeded: true, token: 'legacy-token', userId: 'legacy-user' })
+    if (call.path === '/api/Auth/logout') return new Response(null, { status: 204 })
     if (call.path.startsWith('/api/questions/daily')) return json(question)
     if (call.path === '/api/questions') return json([{ ...question, answers: undefined }])
     if (call.path === '/api/UserProfile/me' && call.method === 'POST') {
@@ -332,6 +334,7 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
       assert.equal(call.method, 'POST')
       return new Response(null, { status: 204 })
     }
+    if (call.path === '/api/Auth/logout') return new Response(null, { status: 204 })
     if (call.path === '/api/wallet/payments?page=1')
       return json([
         {
@@ -559,6 +562,97 @@ test('sign-out while refresh is pending does not restore the session', async () 
   assert.equal(auth.signedIn, false)
   assert.equal(sessionStorage.getItem('intertwine.token'), null)
 })
+test('logout sends a credentialed empty POST before clearing the local session', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('current-token', 'test-user')
+  calls.length = 0
+  handler = (call) => {
+    assert.equal(call.path, '/api/Auth/logout')
+    assert.equal(call.method, 'POST')
+    assert.equal(call.body, undefined)
+    assert.equal(call.withCredentials, true)
+    assert.equal(auth.accessToken, 'current-token')
+    return new Response(null, { status: 204 })
+  }
+
+  await app.signOut()
+
+  assert.equal(calls.length, 1)
+  assert.equal(auth.signedIn, false)
+  assert.equal(sessionStorage.getItem('intertwine.token'), null)
+  assert.equal(sessionStorage.getItem('intertwine.user'), null)
+})
+test('failed backend logout still clears local authentication and reports the failure', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('current-token', 'test-user')
+  calls.length = 0
+  handler = () => json({ message: 'Database unavailable' }, 500)
+
+  await assert.rejects(app.signOut())
+
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/logout').length, 1)
+  assert.equal(calls.some((call) => call.path === '/api/Auth/refresh'), false)
+  assert.equal(auth.signedIn, false)
+  assert.equal(sessionStorage.getItem('intertwine.token'), null)
+})
+test('logout waits for a pending refresh and then revokes its replacement cookie', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  let finishRefresh = () => {}
+  const refreshGate = new Promise((resolve) => {
+    finishRefresh = resolve
+  })
+  handler = (call) => {
+    if (call.path === '/api/Auth/refresh')
+      return refreshGate.then(() => json({ succeeded: true, token: 'new-token', userId: 'test-user' }))
+    if (call.path === '/api/Auth/logout') {
+      assert.equal(auth.accessToken, 'new-token')
+      return new Response(null, { status: 204 })
+    }
+    return call.headers.get('Authorization') === 'Bearer new-token'
+      ? json({ ok: true })
+      : json({}, 401)
+  }
+  const pendingRequest = request('/api/private')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+
+  const signOut = app.signOut()
+  assert.equal(calls.some((call) => call.path === '/api/Auth/logout'), false)
+  finishRefresh()
+  await Promise.allSettled([pendingRequest, signOut])
+
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/logout').length, 1)
+  assert.equal(auth.signedIn, false)
+})
+test('failed pending refresh does not clear local state before logout is attempted', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('expired-token', 'test-user')
+  calls.length = 0
+  let finishRefresh = () => {}
+  const refreshGate = new Promise((resolve) => {
+    finishRefresh = resolve
+  })
+  handler = (call) => {
+    if (call.path === '/api/Auth/refresh') return refreshGate.then(() => json({}, 401))
+    if (call.path === '/api/Auth/logout') {
+      assert.equal(auth.accessToken, 'expired-token')
+      return new Response(null, { status: 204 })
+    }
+    return json({}, 401)
+  }
+  const pendingRequest = request('/api/private')
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  const signOut = app.signOut()
+  finishRefresh()
+  await Promise.allSettled([pendingRequest, signOut])
+
+  assert.equal(calls.filter((call) => call.path === '/api/Auth/logout').length, 1)
+  assert.equal(auth.signedIn, false)
+})
 test('login and registration 401 responses do not refresh', async () => {
   const auth = useAuthStore(pinia)
   auth.setSession('old-token', 'test-user')
@@ -566,6 +660,7 @@ test('login and registration 401 responses do not refresh', async () => {
   handler = () => json({}, 401)
   await assert.rejects(request('/api/Auth/login', { method: 'POST' }), { status: 401 })
   await assert.rejects(request('/api/Auth/register', { method: 'POST' }), { status: 401 })
+  await assert.rejects(request('/api/Auth/logout', { method: 'POST' }), { status: 401 })
   assert.equal(
     calls.some((call) => call.path === '/api/Auth/refresh'),
     false,

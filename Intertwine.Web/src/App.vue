@@ -63,8 +63,13 @@ function retry() {
   else void loadProfile(true)
 }
 async function logout() {
-  await signOut()
-  await router.replace({ name: 'login' })
+  try {
+    await signOut()
+  } catch (cause) {
+    console.error('Server-side logout failed; the local session was cleared.', cause)
+  } finally {
+    await router.replace({ name: 'login' })
+  }
 }
 let timer: ReturnType<typeof setInterval>
 onMounted(() => {

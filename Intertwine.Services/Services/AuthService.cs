@@ -165,6 +165,20 @@ public class AuthService : IAuthService
         };
     }
 
+    public async Task LogoutAsync(string? refreshToken)
+    {
+        if (string.IsNullOrWhiteSpace(refreshToken))
+            return;
+
+        var tokenHash = _tokenService.HashRefreshToken(refreshToken);
+        var existingToken = await _refreshTokenRepository.GetByHashAsync(tokenHash);
+        if (existingToken == null || existingToken.RevokedAtUtc != null)
+            return;
+
+        existingToken.RevokedAtUtc = DateTime.UtcNow;
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     public async Task<AuthResult> RegisterAsync(
         RegisterRequest request)
     {

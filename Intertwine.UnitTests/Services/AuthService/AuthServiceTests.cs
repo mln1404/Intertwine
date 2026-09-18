@@ -175,6 +175,118 @@ public class AuthServiceTests
         Assert.Equal("raw-refresh-token", result.RefreshToken);
     }
 
+    [Fact]
+    public async Task LogoutAsync_WithActiveToken_RevokesAndSavesOnce()
+    {
+        var token = new RefreshToken { TokenHash = "hashed-token" };
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        tokens.Setup(x => x.GetByHashAsync("hashed-token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.HashRefreshToken("raw-token")).Returns("hashed-token");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        var before = DateTime.UtcNow;
+        await service.LogoutAsync("raw-token");
+
+        Assert.InRange(token.RevokedAtUtc!.Value, before, DateTime.UtcNow);
+        tokens.Verify(x => x.GetByHashAsync("hashed-token", It.IsAny<CancellationToken>()), Times.Once);
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData(" ")]
+    public async Task LogoutAsync_WithoutCookie_DoesNothing(string? rawToken)
+    {
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        await service.LogoutAsync(rawToken);
+
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WithUnknownToken_DoesNotSave()
+    {
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        tokens.Setup(x => x.GetByHashAsync("unknown-hash", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((RefreshToken?)null);
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.HashRefreshToken("unknown-token")).Returns("unknown-hash");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        await service.LogoutAsync("unknown-token");
+
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WithAlreadyRevokedToken_DoesNotSave()
+    {
+        var revokedAt = DateTime.UtcNow.AddMinutes(-1);
+        var token = new RefreshToken { RevokedAtUtc = revokedAt };
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        tokens.Setup(x => x.GetByHashAsync("hashed-token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.HashRefreshToken("raw-token")).Returns("hashed-token");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        await service.LogoutAsync("raw-token");
+
+        Assert.Equal(revokedAt, token.RevokedAtUtc);
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WithExpiredStoredToken_RevokesIt()
+    {
+        var token = new RefreshToken { ExpiresAtUtc = DateTime.UtcNow.AddDays(-1) };
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        tokens.Setup(x => x.GetByHashAsync("hashed-token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(token);
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.HashRefreshToken("raw-token")).Returns("hashed-token");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        await service.LogoutAsync("raw-token");
+
+        Assert.NotNull(token.RevokedAtUtc);
+        unitOfWork.Verify(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task LogoutAsync_WhenDatabaseSaveFails_PropagatesFailure()
+    {
+        var tokens = new Mock<IRefreshTokenRepository>(MockBehavior.Strict);
+        tokens.Setup(x => x.GetByHashAsync("hashed-token", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new RefreshToken());
+        var tokenService = new Mock<ITokenService>(MockBehavior.Strict);
+        tokenService.Setup(x => x.HashRefreshToken("raw-token")).Returns("hashed-token");
+        var unitOfWork = new Mock<IUnitOfWork>();
+        unitOfWork.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("Database unavailable"));
+        var service = CreateService(CreateUserManager(), tokenService,
+            refreshTokenRepository: tokens, unitOfWork: unitOfWork);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => service.LogoutAsync("raw-token"));
+    }
+
     private static RegisterRequest CreateRegisterRequest() => new()
     {
         Email = "person@example.com",
@@ -217,8 +329,9 @@ public class AuthServiceTests
         var refreshRepo = (refreshTokenRepository ?? new Mock<IRefreshTokenRepository>()).Object;
 
         var uowMock = unitOfWork ?? new Mock<IUnitOfWork>();
-        uowMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(1);
+        if (unitOfWork == null)
+            uowMock.Setup(x => x.SaveChangesAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(1);
 
         var options = Options.Create(jwtSettings ?? new JwtSettings { RefreshTokenExpiryDays = 7 });
 

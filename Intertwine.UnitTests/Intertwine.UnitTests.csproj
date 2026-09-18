@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Intertwine.API\Intertwine.API.csproj" />
     <ProjectReference Include="..\Intertwine.Repositories\Intertwine.Repositories.csproj" />
     <ProjectReference Include="..\Intertwine.Services\Intertwine.Services.csproj" />
   </ItemGroup>

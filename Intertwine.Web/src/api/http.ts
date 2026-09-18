@@ -8,7 +8,7 @@ import type {
 import { useAuthStore } from '../stores/authStore'
 import { pinia } from '../stores/pinia'
 import { apiBaseUrl, apiTimeoutMs } from './apiConfig'
-import { refreshSession } from './authApi'
+import { refreshSession, requestLogout } from './authApi'
 
 export class ApiError extends Error {
   status: number
@@ -26,6 +26,11 @@ interface RetryConfig extends InternalAxiosRequestConfig {
 }
 
 let refreshPromise: Promise<string> | null = null
+let logoutInProgress = false
+
+export function isLogoutInProgress(): boolean {
+  return logoutInProgress
+}
 
 export const apiClient = axios.create({
   baseURL: apiBaseUrl,
@@ -41,7 +46,7 @@ apiClient.interceptors.request.use((config) => {
 
 function isAuthenticationEndpoint(url: string): boolean {
   const path = new URL(url, 'https://intertwine.invalid').pathname.toLowerCase()
-  return /^\/api\/auth\/(login|register|refresh)\/?$/.test(path)
+  return /^\/api\/auth\/(login|register|refresh|logout)\/?$/.test(path)
 }
 
 async function renewAccessToken(previousToken: string | null): Promise<string> {
@@ -49,7 +54,7 @@ async function renewAccessToken(previousToken: string | null): Promise<string> {
   try {
     const result = await refreshSession()
     if (!result.succeeded || !result.token || !result.userId) {
-      if (auth.accessToken === previousToken) auth.clearSession()
+      if (!logoutInProgress && auth.accessToken === previousToken) auth.clearSession()
       throw new ApiError(sessionEndedMessage, 401)
     }
     // A logout or a new login while refresh was pending must not be overwritten.
@@ -61,7 +66,7 @@ async function renewAccessToken(previousToken: string | null): Promise<string> {
     return result.token
   } catch (cause) {
     if (isAxiosError(cause) && cause.response?.status === 401) {
-      if (auth.accessToken === previousToken) auth.clearSession()
+      if (!logoutInProgress && auth.accessToken === previousToken) auth.clearSession()
       throw new ApiError(sessionEndedMessage, 401)
     }
     throw cause
@@ -78,12 +83,24 @@ function sharedRefresh(): Promise<string> {
   return refreshPromise
 }
 
+export async function logoutSession(clearLocalSession: () => void): Promise<void> {
+  logoutInProgress = true
+  try {
+    // A pending rotation may replace the cookie. Revoke that replacement, not its predecessor.
+    await refreshPromise?.catch(() => undefined)
+    await requestLogout()
+  } finally {
+    clearLocalSession()
+    logoutInProgress = false
+  }
+}
+
 apiClient.interceptors.response.use(undefined, async (cause: unknown) => {
   if (!isAxiosError(cause) || cause.response?.status !== 401 || !cause.config) {
     return Promise.reject(cause)
   }
   const original = cause.config as RetryConfig
-  if (original._retriedAfterRefresh || isAuthenticationEndpoint(original.url ?? '')) {
+  if (logoutInProgress || original._retriedAfterRefresh || isAuthenticationEndpoint(original.url ?? '')) {
     return Promise.reject(cause)
   }
 

@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 import { storeToRefs } from 'pinia'
-import { ApiError, request } from '../api/http'
+import { ApiError, isLogoutInProgress, logoutSession, request } from '../api/http'
 import { useAuthStore } from '../stores/authStore'
 import { pinia } from '../stores/pinia'
 import {
@@ -61,7 +61,7 @@ let profileRequest: Promise<Profile | null> | null = null
 const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
-  if (cause instanceof ApiError && cause.status === 401) {
+  if (cause instanceof ApiError && cause.status === 401 && !isLogoutInProgress()) {
     // Protected requests reach this point only after Axios has attempted refresh and one retry.
     auth.clearSession()
     profile.value = null
@@ -301,8 +301,10 @@ function resetState() {
   error.value = ''
 }
 async function signOut() {
-  auth.clearSession()
-  resetState()
+  await logoutSession(() => {
+    auth.clearSession()
+    resetState()
+  })
 }
 async function saveProfile(input: ProfileInput) {
   profile.value = await request<Profile>('/api/UserProfile/me', {
