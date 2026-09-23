@@ -1,6 +1,6 @@
 # Intertwine Web
 
-A responsive Vue 3 + TypeScript frontend for the existing Intertwine ASP.NET Core API. Components use the Composition API with `<script setup>`, shared reactive state, and a typed Fetch API layer. No additional runtime dependencies are required.
+A responsive Vue 3 + TypeScript frontend for the Intertwine ASP.NET Core API. Components use the Composition API with `<script setup>`. Vue Router owns navigation, Pinia owns authentication state, Axios provides the shared typed HTTP layer, and `useIntertwine.ts` retains the remaining feature state.
 
 ## Run
 
@@ -21,7 +21,7 @@ Copy-Item .env.example .env.local
 
 Start the `Intertwine.API` project from the same solution with its SQL Server and Redis dependencies. The Vite development proxy forwards `/api` to `https://localhost:7279`, matching the API's default HTTPS launch profile; override `API_PROXY_TARGET` if needed. Keep `VITE_API_URL` empty when using this proxy. The proxy accepts the local ASP.NET Core development certificate without disabling HTTPS validation in the browser or API.
 
-The home-page sign-in form connects to the real API. Successful sign-in loads the authenticated user's data. Access tokens are held in `sessionStorage` for the current browser tab and removed on sign-out or an expired-session response.
+The home-page sign-in form connects to the real API. Successful sign-in loads the authenticated user's data. Access tokens are held by Pinia and persisted in `sessionStorage` for the current browser tab. The refresh token remains in a Secure, HttpOnly cookie and cannot be read by Vue. Axios performs one shared refresh for concurrent `401` responses, retries eligible requests once, and clears local authentication when refresh fails. Sign-out calls the backend before clearing local state; local state is still cleared if that request fails.
 
 ## Screens and behaviour
 
@@ -38,22 +38,22 @@ Vue Router uses history-mode paths (`/today`, `/questions`, `/wallet`, `/payment
 
 ## API contracts and current backend limits
 
-| Operation                   | Endpoint                                               |
-| --------------------------- | ------------------------------------------------------ |
-| Daily question (anonymous)  | `GET /api/questions/daily?localDate=YYYY-MM-DD`        |
-| Question summaries          | `GET /api/questions`                                   |
-| Question and answer options | `GET /api/questions/{id}`                              |
-| Answer submission           | `POST /api/questions/{id}/answer?localDate=YYYY-MM-DD` |
-| Authentication              | `POST /api/Auth/register`, `POST /api/Auth/login`      |
-| Profile                     | `GET`, `PUT`, `POST /api/UserProfile/me`               |
-| Deactivate profile          | `POST /api/UserProfile/me/deactivate`                  |
-| Current answers             | `GET /api/user-answers/me`                             |
-| Daily activity              | `GET /api/daily-activity/me?localDate=YYYY-MM-DD`      |
-| Wallet                      | `GET /api/wallet`                                      |
-| Packages                    | `GET /api/credit-packages?currencyCode=AUD`            |
-| Currencies                  | `GET /api/currencies`                                  |
-| Top-up                      | `POST /api/wallet/top-up`                              |
-| Payment history             | `GET /api/wallet/payments?page=1`                      |
+| Operation                   | Endpoint                                                   |
+| --------------------------- | ---------------------------------------------------------- |
+| Daily question (anonymous)  | `GET /api/questions/daily?localDate=YYYY-MM-DD`            |
+| Question summaries          | `GET /api/questions`                                       |
+| Question and answer options | `GET /api/questions/{id}`                                  |
+| Answer submission           | `POST /api/questions/{id}/answer?localDate=YYYY-MM-DD`     |
+| Authentication              | `POST /api/Auth/register`, `/login`, `/refresh`, `/logout` |
+| Profile                     | `GET`, `PUT`, `POST /api/UserProfile/me`                   |
+| Deactivate profile          | `POST /api/UserProfile/me/deactivate`                      |
+| Current answers             | `GET /api/user-answers/me`                                 |
+| Daily activity              | `GET /api/daily-activity/me?localDate=YYYY-MM-DD`          |
+| Wallet                      | `GET /api/wallet`                                          |
+| Packages                    | `GET /api/credit-packages?currencyCode=AUD`                |
+| Currencies                  | `GET /api/currencies`                                      |
+| Top-up                      | `POST /api/wallet/top-up`                                  |
+| Payment history             | `GET /api/wallet/payments?page=1`                          |
 
 Answers send `{ answerId }` and an `Idempotency-Key` header. The key is reused for the same user/question/answer/date after network errors, server failures, and conflicts within the current page session. The browser supplies its **local calendar date**, including across UTC boundaries. Day changes refresh the daily question; a submission from the previous date is rejected locally and asks the user to reopen it.
 
@@ -81,10 +81,12 @@ Production output is in `dist/`. The development proxy is not included in the pr
 
 ```text
 src/
-  api/              Typed HTTP client and question endpoints
+  api/              Axios client, auth refresh/retry, and typed API functions
   components/       Shared icons, dialogs, loading state, authentication, answer form
-  composables/      Shared session, questions, profile, and wallet state
+  composables/      Questions, profile, wallet, answers, and application orchestration
   models/           Types aligned with backend DTOs
+  router/           History-mode routes and authentication navigation guard
+  stores/           Pinia instance and authoritative authentication store
   utils/            Local calendar date and answer-request construction
   views/            Questions, answers, wallet, payments, and profile screens
   App.vue           Navigation and application shell
