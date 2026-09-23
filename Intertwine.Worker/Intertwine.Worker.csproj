@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UserSecretsId>22d72af2-743f-4dff-a0cd-52d3f75fe035</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
