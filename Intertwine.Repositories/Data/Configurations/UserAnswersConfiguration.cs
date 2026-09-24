@@ -24,6 +24,14 @@ namespace Intertwine.Repositories.Data.Configurations
                     x.AnswerId
                 });
 
+            // Supports answer-pool discovery while retaining profile-oriented lookup coverage.
+            builder
+                .HasIndex(x => new
+                {
+                    x.AnswerId,
+                    x.UserProfileId
+                });
+
             builder.HasOne(ua => ua.Answer)
                 .WithMany()
                 .HasForeignKey(ua => ua.AnswerId)

@@ -5,6 +5,8 @@ namespace Intertwine.Services.DTOs.Questions;
 
 public class QuestionDetailDto
 {
+    public int? DailyQuestionId { get; set; }
+    public DateOnly? DailyQuestionDate { get; set; }
     public int QuestionId { get; set; }
     public string QuestionTitle { get; set; } = string.Empty;
     public string FullQuestion { get; set; } = string.Empty;

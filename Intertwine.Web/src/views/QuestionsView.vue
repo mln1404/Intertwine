@@ -7,6 +7,7 @@ import AppModal from '../components/AppModal.vue'
 import AnswerForm from '../components/AnswerForm.vue'
 import CategoryTags from '../components/CategoryTags.vue'
 import LoadingState from '../components/LoadingState.vue'
+import DailyQuestionDiscovery from '../components/DailyQuestionDiscovery.vue'
 const props = defineProps<{ library?: boolean }>()
 const {
   daily,
@@ -29,6 +30,7 @@ const detailLoading = ref(false)
 const detailError = ref('')
 const openedId = ref<number | null>(null)
 const openedDate = ref('')
+const discoveryOpen = ref(false)
 let detailVersion = 0
 const pageRequests = new AbortController()
 const categories = computed(() => [
@@ -115,6 +117,14 @@ onUnmounted(() => pageRequests.abort())
             <p class="muted">There’s no right answer. Just the one that feels like you.</p>
           </div>
           <AnswerForm :key="`${daily.questionId}-${today}`" :question="daily" :date="today" />
+          <button
+            v-if="activity.daily && daily.dailyQuestionId"
+            class="button secondary discovery-action"
+            @click="discoveryOpen = true"
+          >
+            See who answered like you
+            <AppIcon name="user" :size="17" />
+          </button>
         </template>
         <div v-else class="empty-state">
           <AppIcon name="sun" :size="38" />
@@ -329,5 +339,12 @@ onUnmounted(() => pageRequests.abort())
       </h3>
       <AnswerForm :question="selectedQuestion" :date="openedDate" />
     </template>
+  </AppModal>
+  <AppModal
+    v-if="discoveryOpen && daily?.dailyQuestionId"
+    title="See who answered like you"
+    @close="discoveryOpen = false"
+  >
+    <DailyQuestionDiscovery :daily-question-id="daily.dailyQuestionId" :local-date="today" />
   </AppModal>
 </template>

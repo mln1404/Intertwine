@@ -14,7 +14,48 @@ export interface QuestionSummary {
   categories: Category[]
 }
 export interface Question extends QuestionSummary {
+  dailyQuestionId?: number | null
+  dailyQuestionDate?: string | null
   answers: Answer[]
+}
+export type DiscoveryAccessState =
+  'Included' | 'SubscriptionRequired' | 'SparksRequired' | 'Unavailable'
+export interface DiscoveryAnswerPool {
+  answerId: number
+  answerText: string
+  accessState: DiscoveryAccessState
+}
+export interface DiscoveryDay {
+  dailyQuestionId: number
+  date: string
+  questionTitle: string
+  hasAnswered: boolean
+  accessState: DiscoveryAccessState
+}
+export interface DailyQuestionDiscovery {
+  dailyQuestionId: number
+  date: string
+  questionId: number
+  questionTitle: string
+  fullQuestion: string
+  currentUserAnswerId: number
+  currentUserAnswerText: string
+  dateAccessState: DiscoveryAccessState
+  answerPools: DiscoveryAnswerPool[]
+  historicalAccess: DiscoveryDay[]
+}
+export interface DiscoveryUser {
+  userProfileId: number
+  avatarName: string
+  personalityTypeCode: string | null
+}
+export interface DiscoveryUsersPage {
+  accessState: DiscoveryAccessState
+  page: number
+  pageSize: number
+  totalCount: number
+  hasMore: boolean
+  users: DiscoveryUser[]
 }
 export interface Profile {
   userProfileId: number

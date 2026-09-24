@@ -77,6 +77,7 @@ public class QuestionRepository : IQuestionRepository
             .Include(q => q.QuestionCategories)
                 .ThenInclude(qc => qc.Category)
             .Include(q => q.Answers)
+            .Include(q => q.DailyQuestions.Where(dq => dq.Date == localDate))
             .FirstOrDefaultAsync(cancellationToken);
     }
 

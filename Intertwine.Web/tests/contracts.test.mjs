@@ -61,6 +61,9 @@ const { avatarInitials, categoryAccent } = await import(
 const { useIntertwine } = await import(
   pathToFileURL(join(runtime, 'composables/useIntertwine.mjs'))
 )
+const { getDailyQuestionDiscovery, getDiscoveryUsers } = await import(
+  pathToFileURL(join(runtime, 'api/questionsApi.mjs'))
+)
 const { request, ApiError, apiClient } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
 const { refreshClient, refreshSession } = await import(
   pathToFileURL(join(runtime, 'api/authApi.mjs'))
@@ -536,6 +539,42 @@ test('public profile component handles null personality and empty answers withou
   assert.match(source, /CategoryTags/)
   assert.match(source, /borderTopColor:\s*categoryAccent/)
   assert.doesNotMatch(source, /firstName|middleName|lastName|identityUserId|email/i)
+})
+test('Daily Question UI exposes discovery only after the Daily Question is answered', () => {
+  const source = readFileSync(resolve('src/views/QuestionsView.vue'), 'utf8')
+
+  assert.match(source, /activity\.daily\s*&&\s*daily\.dailyQuestionId/)
+  assert.match(source, /See who answered like you/)
+  assert.match(source, /DailyQuestionDiscovery/)
+})
+test('discovery API requests use the Daily Question id, local date, and pagination', async () => {
+  calls.length = 0
+  handler = (call) => {
+    if (call.path === '/api/daily-questions/4/discovery?localDate=2026-09-24')
+      return json({ dailyQuestionId: 4, answerPools: [], historicalAccess: [] })
+    if (
+      call.path ===
+      '/api/daily-questions/4/discovery/users?answerId=10&localDate=2026-09-24&page=2&pageSize=20'
+    )
+      return json({ accessState: 'Included', page: 2, pageSize: 20, users: [] })
+    throw new Error(`Unexpected request ${call.path}`)
+  }
+
+  assert.equal((await getDailyQuestionDiscovery(4, '2026-09-24')).dailyQuestionId, 4)
+  assert.equal((await getDiscoveryUsers(4, 10, '2026-09-24', 2)).accessState, 'Included')
+})
+test('discovery presentation includes public users, access locks, and no fake price', () => {
+  const source = readFileSync(resolve('src/components/DailyQuestionDiscovery.vue'), 'utf8')
+
+  assert.match(source, /avatarInitials\(user\.avatarName\)/)
+  assert.match(source, /user\.avatarName/)
+  assert.match(source, /user\.personalityTypeCode/)
+  assert.match(source, /No matching users yet/)
+  assert.match(source, /Subscription required/)
+  assert.match(source, /Sparks required/)
+  assert.match(source, /LoadingState/)
+  assert.doesNotMatch(source, /\d+\s*(Sparks|✨)/)
+  assert.doesNotMatch(source, /firstName|lastName|email|identityUserId/i)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)

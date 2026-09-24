@@ -71,7 +71,7 @@ public class QuestionService : IQuestionService
         if (question == null)
             return null;
 
-        var questionDto = MapToDetailDto(question);
+        var questionDto = MapToDetailDto(question, localDate);
         await _dailyQuestionCache.SetAsync(
             localDate,
             questionDto,
@@ -100,10 +100,18 @@ public class QuestionService : IQuestionService
         };
     }
 
-    private static QuestionDetailDto MapToDetailDto(Question question)
+    private static QuestionDetailDto MapToDetailDto(
+        Question question,
+        DateOnly? dailyQuestionDate = null)
     {
+        var dailyQuestion = dailyQuestionDate is null
+            ? null
+            : question.DailyQuestions.FirstOrDefault(x => x.Date == dailyQuestionDate);
+
         return new QuestionDetailDto
         {
+            DailyQuestionId = dailyQuestion?.DailyQuestionId,
+            DailyQuestionDate = dailyQuestion?.Date,
             QuestionId = question.QuestionId,
             QuestionTitle = question.QuestionTitle,
             FullQuestion = question.FullQuestion,

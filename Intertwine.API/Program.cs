@@ -59,6 +59,9 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IQuestionService, QuestionService>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IDailyQuestionService, DailyQuestionService>();
+builder.Services.AddScoped<IDailyQuestionDiscoveryService, DailyQuestionDiscoveryService>();
+builder.Services.AddScoped<IDailyQuestionDiscoveryAccessPolicy,
+    DailyQuestionDiscoveryAccessPolicy>();
 builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
 builder.Services.AddScoped<IUserDailyActivityService, UserDailyActivityService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
@@ -73,6 +76,8 @@ builder.Services.AddScoped<IWalletService, WalletService>();
 #region Repository registrations
 builder.Services.AddScoped<IQuestionRepository, QuestionRepository>();
 builder.Services.AddScoped<IDailyQuestionRepository, DailyQuestionRepository>();
+builder.Services.AddScoped<IDailyQuestionDiscoveryRepository,
+    DailyQuestionDiscoveryRepository>();
 builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
 builder.Services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();

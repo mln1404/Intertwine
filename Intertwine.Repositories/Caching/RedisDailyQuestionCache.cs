@@ -12,7 +12,7 @@ namespace Intertwine.Repositories.Caching;
 /// </summary>
 public class RedisDailyQuestionCache : IDailyQuestionCache
 {
-    private const string KeyPrefix = "intertwine:daily-question:";
+    private const string KeyPrefix = "intertwine:daily-question:v2:";
     private static readonly TimeSpan Expiration = TimeSpan.FromHours(24);
 
     private readonly IConnectionMultiplexer _connectionMultiplexer;

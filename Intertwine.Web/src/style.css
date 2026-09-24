@@ -137,6 +137,113 @@
   padding: 10px;
   margin-top: 12px;
 }
+.discovery-action {
+  margin-top: 20px;
+  width: 100%;
+  justify-content: center;
+}
+.daily-discovery {
+  display: grid;
+  gap: 22px;
+}
+.discovery-history {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+.discovery-day {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--green);
+}
+.discovery-day.active {
+  border-color: var(--green);
+  background: var(--sage);
+}
+.discovery-day.locked {
+  background: #f5f3ed;
+}
+.discovery-day small,
+.discovery-pool small,
+.discovery-user small {
+  color: var(--muted);
+}
+.discovery-question h3 {
+  margin: 7px 0 14px;
+  line-height: 1.5;
+}
+.discovery-pools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.discovery-pool {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fafbf8;
+}
+.discovery-pool.selected {
+  border-color: #a9b99d;
+  background: var(--sage);
+}
+.discovery-pool small {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+.discovery-results > h3 {
+  margin-bottom: 14px;
+}
+.discovery-users {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.discovery-user {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 16px 10px;
+  text-align: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.discovery-user strong {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.discovery-avatar {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--green);
+  font-family: 'Manrope', sans-serif;
+  font-weight: 650;
+}
+.discovery-more {
+  display: flex;
+  margin: 18px auto 0;
+}
+.compact-empty-state {
+  padding: 24px 12px;
+}
 .payment-history {
   padding: 24px;
 }
@@ -178,6 +285,11 @@
     padding: 20px;
   }
   .public-answer-grid {
+    grid-template-columns: 1fr;
+  }
+  .discovery-history,
+  .discovery-pools,
+  .discovery-users {
     grid-template-columns: 1fr;
   }
 }

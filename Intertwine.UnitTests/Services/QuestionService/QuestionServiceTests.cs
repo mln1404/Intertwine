@@ -58,6 +58,8 @@ public class QuestionServiceTests
         cache.Setup(x => x.SetAsync(
                 LocalDate,
                 It.Is<QuestionDetailDto>(dto =>
+                    dto.DailyQuestionId == 40 &&
+                    dto.DailyQuestionDate == LocalDate &&
                     dto.QuestionId == question.QuestionId &&
                     dto.Categories.Single().CategoryName == "Culture" &&
                     dto.Answers.Single().AnswerText == "Coffee"),
@@ -70,6 +72,8 @@ public class QuestionServiceTests
 
         Assert.NotNull(result);
         Assert.Equal(question.QuestionId, result.QuestionId);
+        Assert.Equal(40, result.DailyQuestionId);
+        Assert.Equal(LocalDate, result.DailyQuestionDate);
         Assert.Single(result.Categories);
         Assert.Single(result.Answers);
         cache.VerifyAll();
@@ -132,6 +136,14 @@ public class QuestionServiceTests
                 AnswerId = 31,
                 AnswerText = "Inactive answer",
                 IsActive = false
+            }
+        ],
+        DailyQuestions =
+        [
+            new DailyQuestion
+            {
+                DailyQuestionId = 40,
+                Date = LocalDate
             }
         ]
     };
