@@ -78,6 +78,30 @@ public class UserProfileController : ControllerBase
         return Ok(profile);
     }
 
+    [HttpGet("me/preview")]
+    /// <summary>
+    /// Retrieves the authenticated user's profile through the public-safe contract.
+    /// </summary>
+    public async Task<IActionResult> PreviewMe(
+        CancellationToken cancellationToken)
+    {
+        var identityUserId =
+            User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (string.IsNullOrEmpty(identityUserId))
+            return Unauthorized();
+
+        var profile = await _userProfileService
+            .GetCurrentUserPublicProfileAsync(
+                identityUserId,
+                cancellationToken);
+
+        if (profile is null)
+            return NotFound();
+
+        return Ok(profile);
+    }
+
     [HttpPut("me")]
     /// <summary>
     /// Updates the authenticated user's active profile.

@@ -16,6 +16,11 @@ public interface IUserProfileService
     Task<UserProfileDto?> GetCurrentUserProfileAsync(
         string identityUserId);
 
+    /// <summary>Gets the current user's profile using the public-safe contract.</summary>
+    Task<PublicUserProfileDto?> GetCurrentUserPublicProfileAsync(
+        string identityUserId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Updates the editable fields of the current profile.</summary>
     Task<UserProfileDto?> UpdateCurrentUserAsync(
         string identityUserId,

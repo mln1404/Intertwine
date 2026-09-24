@@ -36,6 +36,20 @@ export interface PersonalityType {
   code: string
   name: string | null
 }
+export interface PublicProfileAnswer {
+  questionId: number
+  questionTitle: string
+  fullQuestion: string
+  answerId: number
+  answerText: string
+  categories: Category[]
+}
+export interface PublicProfile {
+  userProfileId: number
+  avatarName: string
+  personalityTypeCode: string | null
+  answeredQuestions: PublicProfileAnswer[]
+}
 export interface CreditPackage {
   creditPackageId: number
   currencyCode: string

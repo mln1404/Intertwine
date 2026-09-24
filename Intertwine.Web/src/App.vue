@@ -29,6 +29,12 @@ const navigation = [
   { id: 'answers', path: '/answers', label: 'My answers', icon: 'book' },
   { id: 'profile', path: '/profile', label: 'My profile', icon: 'user' },
 ]
+const activeNavigationId = computed(() =>
+  typeof route.meta.navigation === 'string' ? route.meta.navigation : route.name,
+)
+const currentNavigation = computed(() =>
+  navigation.find((item) => item.id === activeNavigationId.value),
+)
 const initials = computed(() =>
   profile.value
     ? `${profile.value.firstName.slice(0, 1)}${profile.value.lastName.slice(0, 1)}` || 'I'
@@ -39,7 +45,7 @@ watch(
   () => {
     error.value = ''
     document.title = signedIn.value
-      ? `${navigation.find((item) => item.id === route.name)?.label ?? 'Intertwine'} · Intertwine`
+      ? `${currentNavigation.value?.label ?? 'Intertwine'} · Intertwine`
       : 'Welcome · Intertwine'
     window.scrollTo(0, 0)
   },
@@ -124,8 +130,8 @@ onUnmounted(() => {
             v-for="item in navigation"
             :key="item.id"
             :to="item.path"
-            :class="{ active: route.name === item.id }"
-            :aria-current="route.name === item.id ? 'page' : undefined"
+            :class="{ active: activeNavigationId === item.id }"
+            :aria-current="activeNavigationId === item.id ? 'page' : undefined"
           >
             <AppIcon :name="item.icon" :size="20" />
             <span>{{ item.label }}</span>
@@ -159,7 +165,7 @@ onUnmounted(() => {
           <span class="breadcrumb">
             Your space
             <span>/</span>
-            <strong>{{ navigation.find((item) => item.id === route.name)?.label }}</strong>
+            <strong>{{ currentNavigation?.label }}</strong>
           </span>
           <div class="topbar-actions">
             <span v-if="profileLoading || !profileLoaded" class="spinner compact-spinner"></span>

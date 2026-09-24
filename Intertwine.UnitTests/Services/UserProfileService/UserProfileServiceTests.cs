@@ -41,6 +41,112 @@ public class UserProfileServiceTests
     }
 
     [Fact]
+    public async Task GetCurrentUserPublicProfileAsync_MapsOnlyPublicProfileData()
+    {
+        var profile = CreateProfile();
+        profile.UserAnswers.Add(new UserAnswers
+        {
+            AnswerId = 20,
+            Answer = new Answer
+            {
+                AnswerId = 20,
+                AnswerText = "A thoughtful conversation",
+                Question = new Question
+                {
+                    QuestionId = 7,
+                    QuestionTitle = "Meaningful moments",
+                    FullQuestion = "What helps you feel connected?",
+                    QuestionCategories =
+                    [
+                        new QuestionCategories
+                        {
+                            CategoryId = 3,
+                            Category = new Category
+                            {
+                                CategoryId = 3,
+                                CategoryName = "Relationships",
+                                Color = "#E84393"
+                            }
+                        }
+                    ]
+                }
+            }
+        });
+        var repository = CreateRepositoryReturning(profile);
+        repository.Setup(x => x.GetPublicProfileByIdentityUserIdAsync(
+                profile.IdentityUserId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+        var service = CreateService(repository);
+
+        var result = await service.GetCurrentUserPublicProfileAsync(
+            profile.IdentityUserId);
+
+        Assert.NotNull(result);
+        Assert.Equal(profile.UserProfileId, result.UserProfileId);
+        Assert.Equal(profile.AvatarName, result.AvatarName);
+        Assert.Equal("INTJ", result.PersonalityTypeCode);
+        var answer = Assert.Single(result.AnsweredQuestions);
+        Assert.Equal(7, answer.QuestionId);
+        Assert.Equal(20, answer.AnswerId);
+        Assert.Equal("A thoughtful conversation", answer.AnswerText);
+        var category = Assert.Single(answer.Categories);
+        Assert.Equal("Relationships", category.CategoryName);
+        Assert.Equal("#E84393", category.Color);
+    }
+
+    [Fact]
+    public async Task GetCurrentUserPublicProfileAsync_WithNoPersonalityOrAnswers_ReturnsNullAndEmpty()
+    {
+        var profile = CreateProfile();
+        profile.PersonalityTypeId = null;
+        profile.PersonalityType = null;
+        var repository = CreateRepositoryReturning(profile);
+        repository.Setup(x => x.GetPublicProfileByIdentityUserIdAsync(
+                profile.IdentityUserId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+        var service = CreateService(repository);
+
+        var result = await service.GetCurrentUserPublicProfileAsync(
+            profile.IdentityUserId);
+
+        Assert.NotNull(result);
+        Assert.Null(result.PersonalityTypeCode);
+        Assert.Empty(result.AnsweredQuestions);
+    }
+
+    [Fact]
+    public async Task GetCurrentUserPublicProfileAsync_WhenProfileIsMissing_ReturnsNull()
+    {
+        var repository = CreateRepositoryReturning(null);
+        repository.Setup(x => x.GetPublicProfileByIdentityUserIdAsync(
+                "missing-user",
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+        var service = CreateService(repository);
+
+        var result = await service.GetCurrentUserPublicProfileAsync("missing-user");
+
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void PublicUserProfileDto_DoesNotExposePrivateIdentityFields()
+    {
+        var propertyNames = typeof(PublicUserProfileDto)
+            .GetProperties()
+            .Select(x => x.Name)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        Assert.DoesNotContain("FirstName", propertyNames);
+        Assert.DoesNotContain("MiddleName", propertyNames);
+        Assert.DoesNotContain("LastName", propertyNames);
+        Assert.DoesNotContain("IdentityUserId", propertyNames);
+        Assert.DoesNotContain("Email", propertyNames);
+    }
+
+    [Fact]
     public async Task UpdateCurrentUserAsync_WhenProfileExists_UpdatesAndReturnsProfile()
     {
         var profile = CreateProfile();

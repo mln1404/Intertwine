@@ -13,6 +13,7 @@ const runtime = mkdtempSync(join(tmpdir(), 'intertwine-tests-'))
 const files = [
   'models/question',
   'utils/answerRequest',
+  'utils/profilePresentation',
   'stores/pinia',
   'stores/authStore',
   'api/apiConfig',
@@ -53,6 +54,9 @@ const json = (data, status = 200) =>
   new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } })
 const { localDate, answerRequest } = await import(
   pathToFileURL(join(runtime, 'utils/answerRequest.mjs'))
+)
+const { avatarInitials, categoryAccent } = await import(
+  pathToFileURL(join(runtime, 'utils/profilePresentation.mjs'))
 )
 const { useIntertwine } = await import(
   pathToFileURL(join(runtime, 'composables/useIntertwine.mjs'))
@@ -466,6 +470,72 @@ test('personality types are loaded from the API rather than hardcoded', async ()
     ['ENFP', 'INTJ'],
   )
   assert.deepEqual(app.personalityTypes.value, result)
+})
+test('profile preview navigation uses a dedicated protected route', () => {
+  const routerSource = readFileSync(resolve('src/router/index.ts'), 'utf8')
+  const editProfileSource = readFileSync(resolve('src/views/MyProfileView.vue'), 'utf8')
+
+  assert.match(routerSource, /path:\s*['"]\/profile\/preview['"]/)
+  assert.match(routerSource, /name:\s*['"]profile-preview['"]/)
+  assert.match(routerSource, /requiresAuth:\s*true/)
+  assert.match(editProfileSource, /to="\/profile\/preview"/)
+  assert.match(editProfileSource, />Preview profile</)
+})
+test('public profile presentation derives initials and deterministic category accents', () => {
+  assert.equal(avatarInitials('Lance'), 'L')
+  assert.equal(avatarInitials('Merrick Lance'), 'ML')
+  assert.equal(avatarInitials('  '), 'I')
+  assert.equal(
+    categoryAccent([{ categoryId: 1, categoryName: 'Relationships', color: '#E84393' }]),
+    '#E84393',
+  )
+  assert.equal(
+    categoryAccent([{ categoryId: 1, categoryName: 'Relationships', color: 'invalid' }]),
+    '#3E5947',
+  )
+})
+test('profile preview loads the public-safe contract with answers and category colors', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('test-token', 'test-user')
+  calls.length = 0
+  const preview = {
+    userProfileId: 3,
+    avatarName: 'Merrick Lance',
+    personalityTypeCode: 'ENFP',
+    answeredQuestions: [
+      {
+        questionId: 7,
+        questionTitle: 'Connection',
+        fullQuestion: 'What matters?',
+        answerId: 70,
+        answerText: 'Kindness',
+        categories: [{ categoryId: 2, categoryName: 'Relationships', color: '#E84393' }],
+      },
+    ],
+  }
+  handler = (call) => {
+    assert.equal(call.path, '/api/UserProfile/me/preview')
+    return json(preview)
+  }
+
+  const result = await app.loadProfilePreview(true)
+
+  assert.deepEqual(result, preview)
+  assert.equal(app.publicProfile.value.personalityTypeCode, 'ENFP')
+  assert.equal(app.publicProfile.value.answeredQuestions[0].answerText, 'Kindness')
+  assert.equal(app.publicProfile.value.answeredQuestions[0].categories[0].color, '#E84393')
+})
+test('public profile component handles null personality and empty answers without private names', () => {
+  const source = readFileSync(resolve('src/components/PublicProfileCard.vue'), 'utf8')
+
+  assert.match(source, /profile\.avatarName/)
+  assert.match(source, /profile\.personalityTypeCode/)
+  assert.match(source, /profile\.answeredQuestions/)
+  assert.match(source, /Personality type not shared/)
+  assert.match(source, /No answered questions yet/)
+  assert.match(source, /CategoryTags/)
+  assert.match(source, /borderTopColor:\s*categoryAccent/)
+  assert.doesNotMatch(source, /firstName|middleName|lastName|identityUserId|email/i)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)

@@ -4,7 +4,8 @@ import QuestionsView from '../views/QuestionsView.vue'
 import WalletView from '../views/WalletView.vue'
 import PaymentsView from '../views/PaymentsView.vue'
 import UserAnswersView from '../views/UserAnswersView.vue'
-import ProfileView from '../views/ProfileView.vue'
+import MyProfileView from '../views/MyProfileView.vue'
+import ProfilePreviewView from '../views/ProfilePreviewView.vue'
 import { useAuthStore } from '../stores/authStore'
 import { pinia } from '../stores/pinia'
 
@@ -32,7 +33,13 @@ export const router = createRouter({
     { path: '/wallet', name: 'wallet', component: WalletView, meta: { requiresAuth: true } },
     { path: '/payments', name: 'payments', component: PaymentsView, meta: { requiresAuth: true } },
     { path: '/answers', name: 'answers', component: UserAnswersView, meta: { requiresAuth: true } },
-    { path: '/profile', name: 'profile', component: ProfileView, meta: { requiresAuth: true } },
+    { path: '/profile', name: 'profile', component: MyProfileView, meta: { requiresAuth: true } },
+    {
+      path: '/profile/preview',
+      name: 'profile-preview',
+      component: ProfilePreviewView,
+      meta: { requiresAuth: true, navigation: 'profile' },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

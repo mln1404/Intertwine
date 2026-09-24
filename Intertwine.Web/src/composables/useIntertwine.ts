@@ -23,6 +23,7 @@ import type {
   PaymentHistory,
   Currency,
   PersonalityType,
+  PublicProfile,
 } from '../models/question'
 import { localDate } from '../utils/answerRequest'
 
@@ -36,6 +37,10 @@ const personalityTypes = ref<PersonalityType[]>([])
 const personalityTypesLoading = ref(false)
 const personalityTypesLoaded = ref(false)
 const personalityTypesError = ref('')
+const publicProfile = ref<PublicProfile | null>(null)
+const publicProfileLoading = ref(false)
+const publicProfileLoaded = ref(false)
+const publicProfileError = ref('')
 const currentAnswersLoading = ref(false)
 const currentAnswersLoaded = ref(false)
 const currentAnswersError = ref('')
@@ -64,6 +69,7 @@ let generation = 0
 let questionGeneration = 0
 let profileRequest: Promise<Profile | null> | null = null
 let personalityTypesRequest: Promise<PersonalityType[]> | null = null
+let publicProfileRequest: Promise<PublicProfile | null> | null = null
 const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
@@ -82,6 +88,9 @@ function reportError(cause: unknown) {
     currentAnswersLoaded.value = false
     currentAnswersError.value = ''
     currencies.value = []
+    publicProfile.value = null
+    publicProfileLoaded.value = false
+    publicProfileError.value = ''
     authOpen.value = true
   }
   return cause instanceof Error ? cause.message : 'Something went wrong. Please try again.'
@@ -161,6 +170,44 @@ async function loadPersonalityTypes(force = false) {
     }
   })()
   personalityTypesRequest = pending
+  return pending
+}
+
+async function loadProfilePreview(force = false) {
+  if (!auth.accessToken) {
+    publicProfile.value = null
+    publicProfileLoaded.value = true
+    publicProfileError.value = ''
+    return null
+  }
+  if (!force && publicProfileLoaded.value) return publicProfile.value
+  if (publicProfileRequest) return publicProfileRequest
+
+  const version = generation
+  publicProfileLoading.value = true
+  publicProfileError.value = ''
+  let pending!: Promise<PublicProfile | null>
+  pending = (async () => {
+    try {
+      const result = await request<PublicProfile>('/api/UserProfile/me/preview')
+      if (version !== generation) return null
+      publicProfile.value = result
+      publicProfileLoaded.value = true
+      return result
+    } catch (cause) {
+      if (version !== generation) return null
+      publicProfile.value = null
+      publicProfileLoaded.value = true
+      if (!(cause instanceof ApiError && cause.status === 404)) {
+        publicProfileError.value = reportError(cause)
+      }
+      return null
+    } finally {
+      if (version === generation) publicProfileLoading.value = false
+      if (publicProfileRequest === pending) publicProfileRequest = null
+    }
+  })()
+  publicProfileRequest = pending
   return pending
 }
 
@@ -350,6 +397,11 @@ function resetState() {
   personalityTypesLoaded.value = false
   personalityTypesError.value = ''
   personalityTypesRequest = null
+  publicProfile.value = null
+  publicProfileLoading.value = false
+  publicProfileLoaded.value = false
+  publicProfileError.value = ''
+  publicProfileRequest = null
   daily.value = null
   questions.value = []
   packages.value = []
@@ -435,6 +487,10 @@ export function useIntertwine() {
     personalityTypesLoading,
     personalityTypesLoaded,
     personalityTypesError,
+    publicProfile,
+    publicProfileLoading,
+    publicProfileLoaded,
+    publicProfileError,
     currentAnswersLoading,
     currentAnswersLoaded,
     currentAnswersError,
@@ -455,6 +511,7 @@ export function useIntertwine() {
     refresh,
     loadProfile,
     loadPersonalityTypes,
+    loadProfilePreview,
     loadCurrentAnswers,
     detail,
     answer,

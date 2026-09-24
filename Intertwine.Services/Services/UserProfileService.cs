@@ -73,6 +73,21 @@ public class UserProfileService : IUserProfileService
     }
 
     /// <inheritdoc />
+    public async Task<PublicUserProfileDto?> GetCurrentUserPublicProfileAsync(
+        string identityUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var userProfile = await _userProfileRepository
+            .GetPublicProfileByIdentityUserIdAsync(
+                identityUserId,
+                cancellationToken);
+
+        return userProfile is null
+            ? null
+            : MapToPublicDto(userProfile);
+    }
+
+    /// <inheritdoc />
     public async Task<UserProfileDto?> UpdateCurrentUserAsync(
         string identityUserId,
         UpdateUserProfileRequest request)
@@ -146,6 +161,37 @@ public class UserProfileService : IUserProfileService
             CreditBalance = userProfile.UserWallet?.CreditBalance ?? 0,
             PersonalityTypeId = userProfile.PersonalityTypeId,
             PersonalityTypeCode = personalityTypeCode ?? userProfile.PersonalityType?.Code
+        };
+    }
+
+    private static PublicUserProfileDto MapToPublicDto(
+        UserProfile userProfile)
+    {
+        return new PublicUserProfileDto
+        {
+            UserProfileId = userProfile.UserProfileId,
+            AvatarName = userProfile.AvatarName,
+            PersonalityTypeCode = userProfile.PersonalityType?.Code,
+            AnsweredQuestions = userProfile.UserAnswers
+                .OrderBy(x => x.Answer.Question.QuestionId)
+                .Select(x => new PublicProfileAnswerDto
+                {
+                    QuestionId = x.Answer.Question.QuestionId,
+                    QuestionTitle = x.Answer.Question.QuestionTitle,
+                    FullQuestion = x.Answer.Question.FullQuestion,
+                    AnswerId = x.AnswerId,
+                    AnswerText = x.Answer.AnswerText,
+                    Categories = x.Answer.Question.QuestionCategories
+                        .OrderBy(qc => qc.Category.CategoryName)
+                        .Select(qc => new Intertwine.Services.DTOs.Categories.CategoryDto
+                        {
+                            CategoryId = qc.CategoryId,
+                            CategoryName = qc.Category.CategoryName,
+                            Color = qc.Category.Color
+                        })
+                        .ToList()
+                })
+                .ToList()
         };
     }
 }

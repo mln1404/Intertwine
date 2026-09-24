@@ -73,6 +73,64 @@
   border-radius: 14px;
   padding: 18px;
 }
+.public-profile {
+  overflow: hidden;
+}
+.public-profile-hero {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  padding: 38px;
+  background: linear-gradient(135deg, #eef3e9, #f7f2e8);
+  border-bottom: 1px solid var(--line);
+}
+.public-profile-avatar {
+  width: 112px;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 34px;
+  font-weight: 650;
+  letter-spacing: 1px;
+  box-shadow: 0 8px 22px #30463824;
+}
+.public-profile-identity h1 {
+  margin: 5px 0 12px;
+}
+.personality-pill {
+  color: var(--green);
+  background: #fff;
+  border: 1px solid #dbe4d4;
+  font-weight: 650;
+}
+.public-profile-answers {
+  padding: 30px;
+}
+.public-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 22px;
+}
+.public-answer-card {
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--green);
+  border-radius: 12px;
+  padding: 20px;
+  background: #fff;
+}
+.public-answer-card h3 {
+  margin: 12px 0 7px;
+}
+.public-answer-card > p:not(.saved-answer) {
+  color: var(--muted);
+  line-height: 1.6;
+}
 .saved-answer {
   background: var(--sage);
   border-radius: 8px;
@@ -104,6 +162,23 @@
   }
   .topbar-actions .mode-indicator {
     display: none;
+  }
+  .public-profile-hero {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+    padding: 28px 20px;
+  }
+  .public-profile-avatar {
+    width: 92px;
+    height: 92px;
+    font-size: 28px;
+  }
+  .public-profile-answers {
+    padding: 20px;
+  }
+  .public-answer-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1216,6 +1291,16 @@ main:focus {
   margin-top: 25px;
   font-size: 19px;
 }
+.profile-edit-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 25px;
+}
+.profile-edit-heading .form-title {
+  margin-top: 0;
+}
 .profile-note {
   background: #eeeee3;
   border: 1px solid #e7e7da;
@@ -1894,6 +1979,10 @@ main:focus {
   }
   .inline-message {
     font-size: 12px;
+  }
+  .profile-edit-heading {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 

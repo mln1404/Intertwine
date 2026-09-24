@@ -17,6 +17,13 @@ public interface IUserProfileRepository
     Task<UserProfile?> GetByIdentityUserIdIncludingInactiveAsync(
         string identityUserId);
 
+    /// <summary>
+    /// Gets the active profile data required for its public presentation.
+    /// </summary>
+    Task<UserProfile?> GetPublicProfileByIdentityUserIdAsync(
+        string identityUserId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Gets all profiles.</summary>
     Task<IEnumerable<UserProfile>> GetAllAsync();
 

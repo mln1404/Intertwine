@@ -51,6 +51,25 @@ public class UserProfileRepository : IUserProfileRepository
     }
 
     /// <inheritdoc />
+    public async Task<UserProfile?> GetPublicProfileByIdentityUserIdAsync(
+        string identityUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await ActiveProfiles()
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.PersonalityType)
+            .Include(x => x.UserAnswers)
+                .ThenInclude(x => x.Answer)
+                .ThenInclude(x => x.Question)
+                .ThenInclude(x => x.QuestionCategories)
+                .ThenInclude(x => x.Category)
+            .FirstOrDefaultAsync(
+                x => x.IdentityUserId == identityUserId,
+                cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<IEnumerable<UserProfile>> GetAllAsync()
     {
         return await ActiveProfiles()

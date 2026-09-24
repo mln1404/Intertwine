@@ -144,7 +144,10 @@ onBeforeMount(() => void loadPage())
           call you.
         </p>
       </div>
-      <h2 v-if="profile" class="form-title">Edit profile</h2>
+      <div v-if="profile" class="profile-edit-heading">
+        <h2 class="form-title">Edit profile</h2>
+        <RouterLink class="button secondary" to="/profile/preview">Preview profile</RouterLink>
+      </div>
       <form class="stack-form" @submit.prevent="save">
         <div class="form-row">
           <label>
