@@ -34,6 +34,16 @@ namespace Intertwine.Domain.Entities
         public string MiddleName { get; set; } = string.Empty;
 
         /// <summary>
+        /// Optional identifier of the user's selected personality type.
+        /// </summary>
+        public int? PersonalityTypeId { get; set; }
+
+        /// <summary>
+        /// The user's selected personality type, when one has been provided.
+        /// </summary>
+        public PersonalityType? PersonalityType { get; set; }
+
+        /// <summary>
         /// Answers provided by the user.
         /// </summary>
         public ICollection<UserAnswers> UserAnswers { get; set; }

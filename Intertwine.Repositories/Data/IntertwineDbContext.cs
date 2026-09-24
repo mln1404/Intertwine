@@ -22,6 +22,11 @@ namespace Intertwine.Repositories.Data
         public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
 
         /// <summary>
+        /// Supported personality types that may be assigned to user profiles.
+        /// </summary>
+        public DbSet<PersonalityType> PersonalityTypes => Set<PersonalityType>();
+
+        /// <summary>
         /// Questions managed by the application.
         /// </summary>
         public DbSet<Question> Questions => Set<Question>();
