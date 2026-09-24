@@ -11,6 +11,7 @@ import {
   getQuestions,
   submitAnswer,
 } from '../api/questionsApi'
+import { getMyProfilePreview } from '../api/profilesApi'
 import type {
   AuthResult,
   CreditPackage,
@@ -189,7 +190,7 @@ async function loadProfilePreview(force = false) {
   let pending!: Promise<PublicProfile | null>
   pending = (async () => {
     try {
-      const result = await request<PublicProfile>('/api/UserProfile/me/preview')
+      const result = await getMyProfilePreview()
       if (version !== generation) return null
       publicProfile.value = result
       publicProfileLoaded.value = true

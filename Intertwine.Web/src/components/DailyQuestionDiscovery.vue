@@ -146,11 +146,17 @@ onBeforeMount(() => void loadContext())
         <p>You’re the first thread in this answer group.</p>
       </div>
       <div v-else class="discovery-users">
-        <article v-for="user in users" :key="user.userProfileId" class="discovery-user">
+        <RouterLink
+          v-for="user in users"
+          :key="user.userProfileId"
+          class="discovery-user"
+          :to="{ name: 'user-profile', params: { userProfileId: user.userProfileId } }"
+          :aria-label="`View ${user.avatarName || 'Intertwine member'}'s profile`"
+        >
           <span class="discovery-avatar">{{ avatarInitials(user.avatarName) }}</span>
           <strong>{{ user.avatarName || 'Intertwine member' }}</strong>
           <small>{{ user.personalityTypeCode || 'Personality type not shared' }}</small>
-        </article>
+        </RouterLink>
       </div>
       <button
         v-if="hasMore"

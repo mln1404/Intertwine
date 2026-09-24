@@ -20,6 +20,7 @@ const files = [
   'api/authApi',
   'api/http',
   'api/questionsApi',
+  'api/profilesApi',
   'composables/useIntertwine',
 ]
 const vueUrl = pathToFileURL(resolve('node_modules/vue/dist/vue.runtime.esm-bundler.js')).href
@@ -64,6 +65,7 @@ const { useIntertwine } = await import(
 const { getDailyQuestionDiscovery, getDiscoveryUsers } = await import(
   pathToFileURL(join(runtime, 'api/questionsApi.mjs'))
 )
+const { getPublicUserProfile } = await import(pathToFileURL(join(runtime, 'api/profilesApi.mjs')))
 const { request, ApiError, apiClient } = await import(pathToFileURL(join(runtime, 'api/http.mjs')))
 const { refreshClient, refreshSession } = await import(
   pathToFileURL(join(runtime, 'api/authApi.mjs'))
@@ -575,6 +577,46 @@ test('discovery presentation includes public users, access locks, and no fake pr
   assert.match(source, /LoadingState/)
   assert.doesNotMatch(source, /\d+\s*(Sparks|✨)/)
   assert.doesNotMatch(source, /firstName|lastName|email|identityUserId/i)
+})
+test('discovery users link the entire result to the protected public-profile route', () => {
+  const discoverySource = readFileSync(resolve('src/components/DailyQuestionDiscovery.vue'), 'utf8')
+  const routerSource = readFileSync(resolve('src/router/index.ts'), 'utf8')
+
+  assert.match(discoverySource, /<RouterLink[\s\S]*class="discovery-user"/)
+  assert.match(discoverySource, /name:\s*'user-profile'/)
+  assert.match(discoverySource, /userProfileId:\s*user\.userProfileId/)
+  assert.match(discoverySource, /:aria-label=/)
+  assert.match(routerSource, /path:\s*['"]\/profile\/:userProfileId['"]/)
+  assert.match(routerSource, /name:\s*['"]user-profile['"]/)
+  assert.match(routerSource, /component:\s*UserProfileView/)
+  assert.match(routerSource, /requiresAuth:\s*true/)
+})
+test('public-profile API loads another user by profile ID', async () => {
+  calls.length = 0
+  const publicProfile = {
+    userProfileId: 12,
+    avatarName: 'Public Avatar',
+    personalityTypeCode: 'ENFP',
+    answeredQuestions: [],
+  }
+  handler = (call) => {
+    assert.equal(call.path, '/api/UserProfile/12')
+    return json(publicProfile)
+  }
+
+  assert.deepEqual(await getPublicUserProfile(12), publicProfile)
+})
+test('UserProfileView validates the route ID and reuses the public profile card', () => {
+  const source = readFileSync(resolve('src/views/UserProfileView.vue'), 'utf8')
+
+  assert.match(source, /route\.params\.userProfileId/)
+  assert.match(source, /Number\.isInteger\(userProfileId\)/)
+  assert.match(source, /getPublicUserProfile\(userProfileId\)/)
+  assert.match(source, /<PublicProfileCard[^>]*:profile="profile"/)
+  assert.match(source, /Loading this Intertwine profile/)
+  assert.match(source, /Profile not found/)
+  assert.match(source, /We couldn’t load this profile/)
+  assert.doesNotMatch(source, /firstName|middleName|lastName|identityUserId|email/i)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)

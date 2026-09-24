@@ -55,17 +55,20 @@ public class UserProfileRepository : IUserProfileRepository
         string identityUserId,
         CancellationToken cancellationToken = default)
     {
-        return await ActiveProfiles()
-            .AsNoTracking()
-            .AsSplitQuery()
-            .Include(x => x.PersonalityType)
-            .Include(x => x.UserAnswers)
-                .ThenInclude(x => x.Answer)
-                .ThenInclude(x => x.Question)
-                .ThenInclude(x => x.QuestionCategories)
-                .ThenInclude(x => x.Category)
+        return await PublicProfiles()
             .FirstOrDefaultAsync(
                 x => x.IdentityUserId == identityUserId,
+                cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task<UserProfile?> GetPublicProfileByIdAsync(
+        int userProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        return await PublicProfiles()
+            .FirstOrDefaultAsync(
+                x => x.UserProfileId == userProfileId,
                 cancellationToken);
     }
 
@@ -110,4 +113,15 @@ public class UserProfileRepository : IUserProfileRepository
 
     private IQueryable<UserProfile> ActiveProfiles() =>
         _context.UserProfiles.Where(x => x.IsActive);
+
+    private IQueryable<UserProfile> PublicProfiles() =>
+        ActiveProfiles()
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.PersonalityType)
+            .Include(x => x.UserAnswers)
+                .ThenInclude(x => x.Answer)
+                .ThenInclude(x => x.Question)
+                .ThenInclude(x => x.QuestionCategories)
+                .ThenInclude(x => x.Category);
 }

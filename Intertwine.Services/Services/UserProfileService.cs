@@ -88,6 +88,19 @@ public class UserProfileService : IUserProfileService
     }
 
     /// <inheritdoc />
+    public async Task<PublicUserProfileDto?> GetPublicProfileAsync(
+        int userProfileId,
+        CancellationToken cancellationToken = default)
+    {
+        var userProfile = await _userProfileRepository
+            .GetPublicProfileByIdAsync(userProfileId, cancellationToken);
+
+        return userProfile is null
+            ? null
+            : MapToPublicDto(userProfile);
+    }
+
+    /// <inheritdoc />
     public async Task<UserProfileDto?> UpdateCurrentUserAsync(
         string identityUserId,
         UpdateUserProfileRequest request)

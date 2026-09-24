@@ -102,6 +102,24 @@ public class UserProfileController : ControllerBase
         return Ok(profile);
     }
 
+    [HttpGet("{userProfileId:int}")]
+    /// <summary>
+    /// Retrieves an active user's profile through the public-safe contract.
+    /// </summary>
+    public async Task<IActionResult> GetPublicProfile(
+        int userProfileId,
+        CancellationToken cancellationToken)
+    {
+        var profile = await _userProfileService.GetPublicProfileAsync(
+            userProfileId,
+            cancellationToken);
+
+        if (profile is null)
+            return NotFound();
+
+        return Ok(profile);
+    }
+
     [HttpPut("me")]
     /// <summary>
     /// Updates the authenticated user's active profile.

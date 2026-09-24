@@ -24,6 +24,14 @@ public interface IUserProfileRepository
         string identityUserId,
         CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Gets an active profile by its database identifier with the related data
+    /// required to build its public presentation.
+    /// </summary>
+    Task<UserProfile?> GetPublicProfileByIdAsync(
+        int userProfileId,
+        CancellationToken cancellationToken = default);
+
     /// <summary>Gets all profiles.</summary>
     Task<IEnumerable<UserProfile>> GetAllAsync();
 

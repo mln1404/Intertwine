@@ -132,6 +132,46 @@ public class UserProfileServiceTests
     }
 
     [Fact]
+    public async Task GetPublicProfileAsync_UsesPublicProfileQueryAndMapsNullPersonality()
+    {
+        var profile = CreateProfile();
+        profile.PersonalityTypeId = null;
+        profile.PersonalityType = null;
+        var repository = CreateRepositoryReturning(profile);
+        repository.Setup(x => x.GetPublicProfileByIdAsync(
+                profile.UserProfileId,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(profile);
+        var service = CreateService(repository);
+
+        var result = await service.GetPublicProfileAsync(profile.UserProfileId);
+
+        Assert.NotNull(result);
+        Assert.Equal(profile.UserProfileId, result.UserProfileId);
+        Assert.Equal(profile.AvatarName, result.AvatarName);
+        Assert.Null(result.PersonalityTypeCode);
+        Assert.Empty(result.AnsweredQuestions);
+        repository.Verify(x => x.GetPublicProfileByIdAsync(
+            profile.UserProfileId,
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetPublicProfileAsync_WhenProfileIsMissing_ReturnsNull()
+    {
+        var repository = CreateRepositoryReturning(null);
+        repository.Setup(x => x.GetPublicProfileByIdAsync(
+                999,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((UserProfile?)null);
+        var service = CreateService(repository);
+
+        var result = await service.GetPublicProfileAsync(999);
+
+        Assert.Null(result);
+    }
+
+    [Fact]
     public void PublicUserProfileDto_DoesNotExposePrivateIdentityFields()
     {
         var propertyNames = typeof(PublicUserProfileDto)
@@ -143,7 +183,10 @@ public class UserProfileServiceTests
         Assert.DoesNotContain("MiddleName", propertyNames);
         Assert.DoesNotContain("LastName", propertyNames);
         Assert.DoesNotContain("IdentityUserId", propertyNames);
+        Assert.DoesNotContain("ApplicationUserId", propertyNames);
         Assert.DoesNotContain("Email", propertyNames);
+        Assert.DoesNotContain("CreditBalance", propertyNames);
+        Assert.DoesNotContain("UserWallet", propertyNames);
     }
 
     [Fact]

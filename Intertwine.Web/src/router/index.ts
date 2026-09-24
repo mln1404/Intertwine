@@ -6,6 +6,7 @@ import PaymentsView from '../views/PaymentsView.vue'
 import UserAnswersView from '../views/UserAnswersView.vue'
 import MyProfileView from '../views/MyProfileView.vue'
 import ProfilePreviewView from '../views/ProfilePreviewView.vue'
+import UserProfileView from '../views/UserProfileView.vue'
 import { useAuthStore } from '../stores/authStore'
 import { pinia } from '../stores/pinia'
 
@@ -39,6 +40,12 @@ export const router = createRouter({
       name: 'profile-preview',
       component: ProfilePreviewView,
       meta: { requiresAuth: true, navigation: 'profile' },
+    },
+    {
+      path: '/profile/:userProfileId',
+      name: 'user-profile',
+      component: UserProfileView,
+      meta: { requiresAuth: true },
     },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
