@@ -16,7 +16,9 @@ public class CreateUserProfileTests
             .ReturnsAsync((UserProfile?)null);
         repository.Setup(x => x.AddAsync(It.IsAny<UserProfile>()))
             .ReturnsAsync((UserProfile profile) => profile);
-        var service = new Service(repository.Object);
+        var service = new Service(
+            repository.Object,
+            new Mock<IPersonalityTypeRepository>().Object);
         var request = new CreateUserProfileRequest
         {
             AvatarName = "new-avatar",
@@ -54,7 +56,9 @@ public class CreateUserProfileTests
                 IdentityUserId = "identity-existing",
                 IsActive = false
             });
-        var service = new Service(repository.Object);
+        var service = new Service(
+            repository.Object,
+            new Mock<IPersonalityTypeRepository>().Object);
 
         var result = await service.CreateCurrentUserAsync(
             "identity-existing",

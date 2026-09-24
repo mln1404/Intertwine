@@ -18,4 +18,6 @@ public class CreateUserProfileRequest
 
     [MaxLength(200)]
     public string MiddleName { get; set; } = string.Empty;
+
+    public int? PersonalityTypeId { get; set; }
 }

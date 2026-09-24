@@ -13,7 +13,7 @@ public class UserProfileServiceTests
     {
         var profile = CreateProfile();
         var repository = CreateRepositoryReturning(profile);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
 
         var result = await service.GetCurrentUserProfileAsync(profile.IdentityUserId);
 
@@ -25,13 +25,15 @@ public class UserProfileServiceTests
         Assert.Equal(profile.MiddleName, result.MiddleName);
         Assert.Equal(profile.LastName, result.LastName);
         Assert.Equal(profile.UserWallet!.CreditBalance, result.CreditBalance);
+        Assert.Equal(profile.PersonalityTypeId, result.PersonalityTypeId);
+        Assert.Equal(profile.PersonalityType!.Code, result.PersonalityTypeCode);
     }
 
     [Fact]
     public async Task GetCurrentUserProfileAsync_WhenProfileDoesNotExist_ReturnsNull()
     {
         var repository = CreateRepositoryReturning(null);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
 
         var result = await service.GetCurrentUserProfileAsync("missing-user");
 
@@ -45,7 +47,7 @@ public class UserProfileServiceTests
         var repository = CreateRepositoryReturning(profile);
         repository.Setup(x => x.UpdateAsync(profile))
             .Returns(Task.CompletedTask);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
         var request = new UpdateUserProfileRequest
         {
             AvatarName = "new-avatar",
@@ -63,14 +65,71 @@ public class UserProfileServiceTests
         Assert.Equal(request.FirstName, result.FirstName);
         Assert.Equal(request.MiddleName, result.MiddleName);
         Assert.Equal(request.LastName, result.LastName);
+        Assert.Null(result.PersonalityTypeId);
+        Assert.Null(result.PersonalityTypeCode);
         repository.Verify(x => x.UpdateAsync(profile), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateCurrentUserAsync_WithActivePersonalityType_SavesAndReturnsCode()
+    {
+        var profile = CreateProfile();
+        var repository = CreateRepositoryReturning(profile);
+        repository.Setup(x => x.UpdateAsync(profile))
+            .Returns(Task.CompletedTask);
+        var personalityType = new PersonalityType
+        {
+            PersonalityTypeId = 8,
+            Code = "ENFP",
+            IsActive = true
+        };
+        var personalityTypes = new Mock<IPersonalityTypeRepository>();
+        personalityTypes.Setup(x => x.GetActiveByIdAsync(8, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(personalityType);
+        var service = CreateService(repository, personalityTypes);
+
+        var result = await service.UpdateCurrentUserAsync(
+            profile.IdentityUserId,
+            new UpdateUserProfileRequest
+            {
+                AvatarName = profile.AvatarName,
+                FirstName = profile.FirstName,
+                MiddleName = profile.MiddleName,
+                LastName = profile.LastName,
+                PersonalityTypeId = 8
+            });
+
+        Assert.NotNull(result);
+        Assert.Equal(8, result.PersonalityTypeId);
+        Assert.Equal("ENFP", result.PersonalityTypeCode);
+        Assert.Equal(8, profile.PersonalityTypeId);
+        repository.Verify(x => x.UpdateAsync(profile), Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateCurrentUserAsync_WithInvalidPersonalityType_RejectsWithoutUpdate()
+    {
+        var profile = CreateProfile();
+        var repository = CreateRepositoryReturning(profile);
+        var personalityTypes = new Mock<IPersonalityTypeRepository>();
+        personalityTypes.Setup(x => x.GetActiveByIdAsync(999, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((PersonalityType?)null);
+        var service = CreateService(repository, personalityTypes);
+
+        var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
+            service.UpdateCurrentUserAsync(
+                profile.IdentityUserId,
+                new UpdateUserProfileRequest { PersonalityTypeId = 999 }));
+
+        Assert.Contains("does not exist or is inactive", exception.Message);
+        repository.Verify(x => x.UpdateAsync(It.IsAny<UserProfile>()), Times.Never);
     }
 
     [Fact]
     public async Task UpdateCurrentUserAsync_WhenProfileDoesNotExist_ReturnsNullWithoutUpdate()
     {
         var repository = CreateRepositoryReturning(null);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
 
         var result = await service.UpdateCurrentUserAsync(
             "missing-user",
@@ -89,7 +148,7 @@ public class UserProfileServiceTests
         var repository = CreateRepositoryReturning(profile);
         repository.Setup(x => x.SetIsActiveAsync(profile, false, profile.IdentityUserId))
             .Returns(Task.CompletedTask);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
 
         var result = await service.DeactivateCurrentUserAsync(profile.IdentityUserId);
 
@@ -103,7 +162,7 @@ public class UserProfileServiceTests
     public async Task DeactivateCurrentUserAsync_WhenProfileDoesNotExist_ReturnsFalse()
     {
         var repository = CreateRepositoryReturning(null);
-        var service = new Service(repository.Object);
+        var service = CreateService(repository);
 
         var result = await service.DeactivateCurrentUserAsync("missing-user");
 
@@ -125,6 +184,13 @@ public class UserProfileServiceTests
         return repository;
     }
 
+    private static Service CreateService(
+        Mock<IUserProfileRepository> profiles,
+        Mock<IPersonalityTypeRepository>? personalityTypes = null) =>
+        new(
+            profiles.Object,
+            (personalityTypes ?? new Mock<IPersonalityTypeRepository>()).Object);
+
     private static UserProfile CreateProfile() => new()
     {
         UserProfileId = 12,
@@ -134,6 +200,13 @@ public class UserProfileServiceTests
         MiddleName = "Middle",
         LastName = "Last",
         IsActive = true,
+        PersonalityTypeId = 1,
+        PersonalityType = new PersonalityType
+        {
+            PersonalityTypeId = 1,
+            Code = "INTJ",
+            IsActive = true
+        },
         UserWallet = new UserWallet
         {
             CreditBalance = 125

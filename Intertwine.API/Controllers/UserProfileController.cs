@@ -35,8 +35,16 @@ public class UserProfileController : ControllerBase
         if (string.IsNullOrEmpty(identityUserId))
             return Unauthorized();
 
-        var profile = await _userProfileService
-            .CreateCurrentUserAsync(identityUserId, request);
+        UserProfileDto? profile;
+        try
+        {
+            profile = await _userProfileService
+                .CreateCurrentUserAsync(identityUserId, request);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
 
         if (profile is null)
         {
@@ -83,10 +91,18 @@ public class UserProfileController : ControllerBase
         if (string.IsNullOrEmpty(identityUserId))
             return Unauthorized();
 
-        var profile = await _userProfileService
-            .UpdateCurrentUserAsync(
-                identityUserId,
-                request);
+        UserProfileDto? profile;
+        try
+        {
+            profile = await _userProfileService
+                .UpdateCurrentUserAsync(
+                    identityUserId,
+                    request);
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
 
         if (profile is null)
             return NotFound();

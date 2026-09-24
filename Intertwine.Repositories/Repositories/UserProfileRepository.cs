@@ -24,6 +24,7 @@ public class UserProfileRepository : IUserProfileRepository
             .AsNoTracking()
             .Include(x => x.UserAnswers)
             .Include(x => x.UserWallet)
+            .Include(x => x.PersonalityType)
             .FirstOrDefaultAsync(x => x.UserProfileId == userProfileId);
     }
 
@@ -33,6 +34,7 @@ public class UserProfileRepository : IUserProfileRepository
     {
         return await ActiveProfiles()
             .Include(x => x.UserWallet)
+            .Include(x => x.PersonalityType)
             .FirstOrDefaultAsync(
                 x => x.IdentityUserId == identityUserId);
     }
@@ -43,6 +45,7 @@ public class UserProfileRepository : IUserProfileRepository
     {
         return await _context.UserProfiles
             .Include(x => x.UserWallet)
+            .Include(x => x.PersonalityType)
             .FirstOrDefaultAsync(
                 x => x.IdentityUserId == identityUserId);
     }
@@ -54,6 +57,7 @@ public class UserProfileRepository : IUserProfileRepository
             .AsNoTracking()
             .Include(x => x.UserAnswers)
             .Include(x => x.UserWallet)
+            .Include(x => x.PersonalityType)
             .ToListAsync();
     }
 

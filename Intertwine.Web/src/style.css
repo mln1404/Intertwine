@@ -1151,7 +1151,8 @@ main:focus {
   font-size: 12px;
   font-weight: 400;
 }
-.stack-form input {
+.stack-form input,
+.stack-form select {
   border: 1px solid #dfe6d7;
   border-radius: 6px;
   padding: 12px 13px;

@@ -113,6 +113,8 @@ const profile = {
   lastName: 'Person',
   avatarName: 'test',
   creditBalance: 45,
+  personalityTypeId: null,
+  personalityTypeCode: null,
 }
 const credentials = {
   email: 'test@example.invalid',
@@ -249,6 +251,7 @@ test('legacy account can create its missing profile without loading profile-depe
     lastName: 'Person',
     middleName: '',
     avatarName: 'legacy',
+    personalityTypeId: null,
   })
 
   assert.equal(app.profile.value.avatarName, 'legacy')
@@ -306,7 +309,10 @@ test('ambiguous answer failures retain one idempotency key across retries', asyn
   assert.equal(new Set(keys).size, 1)
   assert.equal(submissions[0].body, '{"answerId":70}')
   assert.ok(submissions[0].path.endsWith(`?localDate=${localDate()}`))
-  assert.equal(calls.some((call) => call.path === '/api/wallet'), false)
+  assert.equal(
+    calls.some((call) => call.path === '/api/wallet'),
+    false,
+  )
 })
 test('successful paid answer refetches and displays the authoritative wallet balance', async () => {
   const auth = useAuthStore(pinia)
@@ -320,7 +326,11 @@ test('successful paid answer refetches and displays the authoritative wallet bal
       return json({ message: 'Answer submitted successfully.' })
     return standard(call)
   }
-  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+  const paidQuestion = {
+    ...question,
+    questionId: 8,
+    answers: [{ answerId: 80, answerText: 'Yes' }],
+  }
 
   assert.equal(await app.answer(paidQuestion, 80, localDate(), true), true)
 
@@ -338,11 +348,18 @@ test('failed paid answer does not refetch or locally deduct Sparks', async () =>
   calls.length = 0
   handler = (call) =>
     call.method === 'POST' ? json({ message: 'Daily limit reached.' }, 400) : standard(call)
-  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+  const paidQuestion = {
+    ...question,
+    questionId: 8,
+    answers: [{ answerId: 80, answerText: 'Yes' }],
+  }
 
   await assert.rejects(app.answer(paidQuestion, 80, localDate(), true), /Daily limit reached/)
 
-  assert.equal(calls.some((call) => call.path === '/api/wallet'), false)
+  assert.equal(
+    calls.some((call) => call.path === '/api/wallet'),
+    false,
+  )
   assert.equal(app.balance.value, 45)
 })
 test('wallet refetch failure does not turn a saved paid answer into a failed submission', async () => {
@@ -354,7 +371,11 @@ test('wallet refetch failure does not turn a saved paid answer into a failed sub
       return json({ message: 'Answer submitted successfully.' })
     return standard(call)
   }
-  const paidQuestion = { ...question, questionId: 8, answers: [{ answerId: 80, answerText: 'Yes' }] }
+  const paidQuestion = {
+    ...question,
+    questionId: 8,
+    answers: [{ answerId: 80, answerText: 'Yes' }],
+  }
 
   assert.equal(await app.answer(paidQuestion, 80, localDate(), true), true)
 
@@ -382,7 +403,9 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
     }
     if (call.path === '/api/UserProfile/me') {
       assert.equal(call.method, 'PUT')
-      return json({ ...profile, ...JSON.parse(call.body) })
+      const input = JSON.parse(call.body)
+      assert.equal(input.personalityTypeId, 8)
+      return json({ ...profile, ...input, personalityTypeCode: 'ENFP' })
     }
     if (call.path === '/api/UserProfile/me/deactivate') {
       assert.equal(call.method, 'POST')
@@ -413,12 +436,36 @@ test('wallet and profile mutations follow current endpoint contracts', async () 
     lastName: 'Person',
     middleName: '',
     avatarName: 'updated',
+    personalityTypeId: 8,
   })
   assert.equal(app.profile.value.firstName, 'Updated')
+  assert.equal(app.profile.value.personalityTypeId, 8)
+  assert.equal(app.profile.value.personalityTypeCode, 'ENFP')
   assert.equal((await app.loadPayments())[0].sparksPurchased, 120)
   await app.deactivateProfile()
   assert.equal(sessionStorage.getItem('intertwine.token'), null)
   assert.equal(app.signedIn.value, false)
+})
+test('personality types are loaded from the API rather than hardcoded', async () => {
+  const auth = useAuthStore(pinia)
+  auth.setSession('test-token', 'test-user')
+  calls.length = 0
+  handler = (call) => {
+    assert.equal(call.path, '/api/personality-types')
+    assert.equal(call.method, 'GET')
+    return json([
+      { personalityTypeId: 8, code: 'ENFP', name: null },
+      { personalityTypeId: 1, code: 'INTJ', name: null },
+    ])
+  }
+
+  const result = await app.loadPersonalityTypes(true)
+
+  assert.deepEqual(
+    result.map((item) => item.code),
+    ['ENFP', 'INTJ'],
+  )
+  assert.deepEqual(app.personalityTypes.value, result)
 })
 test('401 clears private state and prompts sign-in', async () => {
   handler = () => json({}, 401)
@@ -645,7 +692,10 @@ test('failed backend logout still clears local authentication and reports the fa
   await assert.rejects(app.signOut())
 
   assert.equal(calls.filter((call) => call.path === '/api/Auth/logout').length, 1)
-  assert.equal(calls.some((call) => call.path === '/api/Auth/refresh'), false)
+  assert.equal(
+    calls.some((call) => call.path === '/api/Auth/refresh'),
+    false,
+  )
   assert.equal(auth.signedIn, false)
   assert.equal(sessionStorage.getItem('intertwine.token'), null)
 })
@@ -659,7 +709,9 @@ test('logout waits for a pending refresh and then revokes its replacement cookie
   })
   handler = (call) => {
     if (call.path === '/api/Auth/refresh')
-      return refreshGate.then(() => json({ succeeded: true, token: 'new-token', userId: 'test-user' }))
+      return refreshGate.then(() =>
+        json({ succeeded: true, token: 'new-token', userId: 'test-user' }),
+      )
     if (call.path === '/api/Auth/logout') {
       assert.equal(auth.accessToken, 'new-token')
       return new Response(null, { status: 204 })
@@ -673,7 +725,10 @@ test('logout waits for a pending refresh and then revokes its replacement cookie
   assert.equal(calls.filter((call) => call.path === '/api/Auth/refresh').length, 1)
 
   const signOut = app.signOut()
-  assert.equal(calls.some((call) => call.path === '/api/Auth/logout'), false)
+  assert.equal(
+    calls.some((call) => call.path === '/api/Auth/logout'),
+    false,
+  )
   finishRefresh()
   await Promise.allSettled([pendingRequest, signOut])
 

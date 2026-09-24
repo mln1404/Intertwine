@@ -22,6 +22,7 @@ import type {
   QuestionSummary,
   PaymentHistory,
   Currency,
+  PersonalityType,
 } from '../models/question'
 import { localDate } from '../utils/answerRequest'
 
@@ -31,6 +32,10 @@ const profile = ref<Profile | null>(null)
 const profileLoading = ref(false)
 const profileLoaded = ref(false)
 const profileError = ref('')
+const personalityTypes = ref<PersonalityType[]>([])
+const personalityTypesLoading = ref(false)
+const personalityTypesLoaded = ref(false)
+const personalityTypesError = ref('')
 const currentAnswersLoading = ref(false)
 const currentAnswersLoaded = ref(false)
 const currentAnswersError = ref('')
@@ -58,6 +63,7 @@ const displayName = computed(
 let generation = 0
 let questionGeneration = 0
 let profileRequest: Promise<Profile | null> | null = null
+let personalityTypesRequest: Promise<PersonalityType[]> | null = null
 const pendingAnswers = new Map<string, string>()
 
 function reportError(cause: unknown) {
@@ -119,6 +125,42 @@ async function loadProfile(force = false) {
     }
   })()
   profileRequest = pending
+  return pending
+}
+
+async function loadPersonalityTypes(force = false) {
+  if (!auth.accessToken) {
+    personalityTypes.value = []
+    personalityTypesLoaded.value = true
+    personalityTypesError.value = ''
+    return []
+  }
+  if (!force && personalityTypesLoaded.value) return personalityTypes.value
+  if (personalityTypesRequest) return personalityTypesRequest
+
+  const version = generation
+  personalityTypesLoading.value = true
+  personalityTypesError.value = ''
+  let pending!: Promise<PersonalityType[]>
+  pending = (async () => {
+    try {
+      const result = await request<PersonalityType[]>('/api/personality-types')
+      if (version !== generation) return []
+      personalityTypes.value = result
+      personalityTypesLoaded.value = true
+      return result
+    } catch (cause) {
+      if (version !== generation) return []
+      personalityTypes.value = []
+      personalityTypesLoaded.value = true
+      personalityTypesError.value = reportError(cause)
+      return []
+    } finally {
+      if (version === generation) personalityTypesLoading.value = false
+      if (personalityTypesRequest === pending) personalityTypesRequest = null
+    }
+  })()
+  personalityTypesRequest = pending
   return pending
 }
 
@@ -271,7 +313,8 @@ async function answer(question: Question, answerId: number, date: string, spendS
   }
   await refresh()
   if (balanceRefreshFailed && signedIn.value)
-    error.value = 'Your answer was saved, but we couldn’t refresh your Spark balance. Check your wallet.'
+    error.value =
+      'Your answer was saved, but we couldn’t refresh your Spark balance. Check your wallet.'
   return true
 }
 async function authenticate(
@@ -302,6 +345,11 @@ function resetState() {
   currentAnswersLoaded.value = false
   currentAnswersError.value = ''
   profileRequest = null
+  personalityTypes.value = []
+  personalityTypesLoading.value = false
+  personalityTypesLoaded.value = false
+  personalityTypesError.value = ''
+  personalityTypesRequest = null
   daily.value = null
   questions.value = []
   packages.value = []
@@ -383,6 +431,10 @@ export function useIntertwine() {
     profileLoading,
     profileLoaded,
     profileError,
+    personalityTypes,
+    personalityTypesLoading,
+    personalityTypesLoaded,
+    personalityTypesError,
     currentAnswersLoading,
     currentAnswersLoaded,
     currentAnswersError,
@@ -402,6 +454,7 @@ export function useIntertwine() {
     displayName,
     refresh,
     loadProfile,
+    loadPersonalityTypes,
     loadCurrentAnswers,
     detail,
     answer,

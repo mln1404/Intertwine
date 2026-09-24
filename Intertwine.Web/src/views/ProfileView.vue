@@ -4,11 +4,16 @@ import { useIntertwine } from '../composables/useIntertwine'
 import AppIcon from '../components/AppIcon.vue'
 import AppModal from '../components/AppModal.vue'
 import LoadingState from '../components/LoadingState.vue'
+import type { ProfileInput } from '../models/question'
 const {
   profile,
   profileLoading,
   profileLoaded,
   profileError,
+  personalityTypes,
+  personalityTypesLoading,
+  personalityTypesLoaded,
+  personalityTypesError,
   canUseAccount,
   authOpen,
   createProfile,
@@ -16,8 +21,15 @@ const {
   deactivateProfile,
   reportError,
   loadProfile,
+  loadPersonalityTypes,
 } = useIntertwine()
-const form = reactive({ firstName: '', middleName: '', lastName: '', avatarName: '' })
+const form = reactive<ProfileInput>({
+  firstName: '',
+  middleName: '',
+  lastName: '',
+  avatarName: '',
+  personalityTypeId: null,
+})
 const busy = ref(false)
 const error = ref('')
 const message = ref('')
@@ -30,6 +42,7 @@ watch(
       middleName: value?.middleName || '',
       lastName: value?.lastName || '',
       avatarName: value?.avatarName || '',
+      personalityTypeId: value?.personalityTypeId ?? null,
     }),
   { immediate: true },
 )
@@ -43,6 +56,10 @@ const dirty = computed(() =>
 
 function beginDeactivate() {
   deactivating.value = true
+}
+
+async function loadPage(force = false) {
+  await Promise.all([loadProfile(force), loadPersonalityTypes(force)])
 }
 
 async function save() {
@@ -73,7 +90,7 @@ async function deactivate() {
     busy.value = false
   }
 }
-onBeforeMount(() => void loadProfile())
+onBeforeMount(() => void loadPage())
 </script>
 <template>
   <header class="page-heading">
@@ -93,15 +110,17 @@ onBeforeMount(() => void loadProfile())
     <button class="button primary" @click="authOpen = true">Sign in</button>
   </div>
   <LoadingState
-    v-else-if="profileLoading || !profileLoaded"
+    v-else-if="
+      profileLoading || !profileLoaded || personalityTypesLoading || !personalityTypesLoaded
+    "
     message="Loading your profile…"
     panel
   />
-  <div v-else-if="profileError" class="empty-state panel">
+  <div v-else-if="profileError || personalityTypesError" class="empty-state panel">
     <AppIcon name="user" :size="36" />
     <h2>We couldn’t load your profile.</h2>
-    <p>{{ profileError }}</p>
-    <button class="button secondary" @click="loadProfile(true)">Try again</button>
+    <p>{{ profileError || personalityTypesError }}</p>
+    <button class="button secondary" @click="loadPage(true)">Try again</button>
   </div>
   <div v-else class="profile-layout">
     <section class="panel profile-form">
@@ -115,6 +134,7 @@ onBeforeMount(() => void loadProfile())
             {{ profile.avatarName ? `@${profile.avatarName}` : 'Your Intertwine profile' }}
           </p>
         </div>
+        <span class="pill">MBTI · {{ profile.personalityTypeCode || 'Not selected' }}</span>
       </div>
       <div v-else class="profile-introduction">
         <p class="eyebrow">ONE LAST STEP</p>
@@ -156,6 +176,21 @@ onBeforeMount(() => void loadProfile())
           <input v-model.trim="form.avatarName" autocomplete="nickname" required maxlength="100" />
         </label>
         <p class="small muted">The name associated with your Intertwine avatar.</p>
+        <label>
+          MBTI personality type
+          <span class="muted">(optional)</span>
+          <select v-model="form.personalityTypeId" :disabled="busy">
+            <option :value="null">Not selected</option>
+            <option
+              v-for="personalityType in personalityTypes"
+              :key="personalityType.personalityTypeId"
+              :value="personalityType.personalityTypeId"
+            >
+              {{ personalityType.code
+              }}{{ personalityType.name ? ` — ${personalityType.name}` : '' }}
+            </option>
+          </select>
+        </label>
         <p v-if="error" class="inline-message error" role="alert">{{ error }}</p>
         <p v-if="message" class="inline-message success" role="status">{{ message }}</p>
         <div class="form-actions">

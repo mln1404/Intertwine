@@ -9,4 +9,6 @@ public class UpdateUserProfileRequest
     public string LastName { get; set; } = string.Empty;
 
     public string MiddleName { get; set; } = string.Empty;
+
+    public int? PersonalityTypeId { get; set; }
 }

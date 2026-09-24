@@ -62,6 +62,7 @@ builder.Services.AddScoped<IDailyQuestionService, DailyQuestionService>();
 builder.Services.AddScoped<IUserAnswerService, UserAnswerService>();
 builder.Services.AddScoped<IUserDailyActivityService, UserDailyActivityService>();
 builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IPersonalityTypeService, PersonalityTypeService>();
 
 // Financial services
 builder.Services.AddScoped<ICreditPackageService, CreditPackageService>();
@@ -75,6 +76,7 @@ builder.Services.AddScoped<IDailyQuestionRepository, DailyQuestionRepository>();
 builder.Services.AddScoped<IUserAnswerRepository, UserAnswerRepository>();
 builder.Services.AddScoped<IUserDailyActivityRepository, UserDailyActivityRepository>();
 builder.Services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+builder.Services.AddScoped<IPersonalityTypeRepository, PersonalityTypeRepository>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<IAnswerSubmissionIdempotencyStore,
     RedisAnswerSubmissionIdempotencyStore>();

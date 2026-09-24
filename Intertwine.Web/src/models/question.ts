@@ -24,8 +24,18 @@ export interface Profile {
   middleName: string
   lastName: string
   creditBalance: number
+  personalityTypeId: number | null
+  personalityTypeCode: string | null
 }
-export type ProfileInput = Pick<Profile, 'avatarName' | 'firstName' | 'middleName' | 'lastName'>
+export type ProfileInput = Pick<
+  Profile,
+  'avatarName' | 'firstName' | 'middleName' | 'lastName' | 'personalityTypeId'
+>
+export interface PersonalityType {
+  personalityTypeId: number
+  code: string
+  name: string | null
+}
 export interface CreditPackage {
   creditPackageId: number
   currencyCode: string

@@ -1,4 +1,5 @@
 using Intertwine.Domain.Entities;
+using Intertwine.Services.Constants;
 using Intertwine.Services.DTOs.UserProfiles;
 using Intertwine.Services.Interfaces;
 using Intertwine.Services.Interfaces.Repositories;
@@ -11,11 +12,14 @@ namespace Intertwine.Services.Services;
 public class UserProfileService : IUserProfileService
 {
     private readonly IUserProfileRepository _userProfileRepository;
+    private readonly IPersonalityTypeRepository _personalityTypeRepository;
 
     public UserProfileService(
-        IUserProfileRepository userProfileRepository)
+        IUserProfileRepository userProfileRepository,
+        IPersonalityTypeRepository personalityTypeRepository)
     {
         _userProfileRepository = userProfileRepository;
+        _personalityTypeRepository = personalityTypeRepository;
     }
 
     /// <inheritdoc />
@@ -29,6 +33,9 @@ public class UserProfileService : IUserProfileService
         if (existingProfile is not null)
             return null;
 
+        var personalityType = await GetPersonalityTypeAsync(
+            request.PersonalityTypeId);
+
         var userProfile = new UserProfile
         {
             IdentityUserId = identityUserId,
@@ -36,6 +43,7 @@ public class UserProfileService : IUserProfileService
             FirstName = request.FirstName,
             LastName = request.LastName,
             MiddleName = request.MiddleName,
+            PersonalityTypeId = personalityType?.PersonalityTypeId,
             DateCreated = DateTime.UtcNow,
             CreatedBy = identityUserId,
             UserWallet = new UserWallet
@@ -48,7 +56,7 @@ public class UserProfileService : IUserProfileService
 
         await _userProfileRepository.AddAsync(userProfile);
 
-        return MapToDto(userProfile);
+        return MapToDto(userProfile, personalityType?.Code);
     }
 
     /// <inheritdoc />
@@ -75,14 +83,19 @@ public class UserProfileService : IUserProfileService
         if (userProfile is null)
             return null;
 
+        var personalityType = await GetPersonalityTypeAsync(
+            request.PersonalityTypeId);
+
         userProfile.AvatarName = request.AvatarName;
         userProfile.FirstName = request.FirstName;
         userProfile.LastName = request.LastName;
         userProfile.MiddleName = request.MiddleName;
+        userProfile.PersonalityTypeId = personalityType?.PersonalityTypeId;
+        userProfile.PersonalityType = null;
 
         await _userProfileRepository.UpdateAsync(userProfile);
 
-        return MapToDto(userProfile);
+        return MapToDto(userProfile, personalityType?.Code);
     }
 
     /// <inheritdoc />
@@ -103,8 +116,24 @@ public class UserProfileService : IUserProfileService
         return true;
     }
 
+    private async Task<PersonalityType?> GetPersonalityTypeAsync(
+        int? personalityTypeId)
+    {
+        if (personalityTypeId is null)
+            return null;
+
+        var personalityType = await _personalityTypeRepository
+            .GetActiveByIdAsync(personalityTypeId.Value);
+
+        if (personalityType is null)
+            throw new ArgumentException(UserProfileMessages.InvalidPersonalityType);
+
+        return personalityType;
+    }
+
     private static UserProfileDto MapToDto(
-        UserProfile userProfile)
+        UserProfile userProfile,
+        string? personalityTypeCode = null)
     {
         return new UserProfileDto
         {
@@ -114,7 +143,9 @@ public class UserProfileService : IUserProfileService
             LastName = userProfile.LastName,
             MiddleName = userProfile.MiddleName,
             IdentityUserId = userProfile.IdentityUserId,
-            CreditBalance = userProfile.UserWallet?.CreditBalance ?? 0
+            CreditBalance = userProfile.UserWallet?.CreditBalance ?? 0,
+            PersonalityTypeId = userProfile.PersonalityTypeId,
+            PersonalityTypeCode = personalityTypeCode ?? userProfile.PersonalityType?.Code
         };
     }
 }

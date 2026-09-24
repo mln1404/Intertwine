@@ -15,4 +15,8 @@ public class UserProfileDto
     public string IdentityUserId { get; set; } = string.Empty;
 
     public long CreditBalance { get; set; }
+
+    public int? PersonalityTypeId { get; set; }
+
+    public string? PersonalityTypeCode { get; set; }
 }
